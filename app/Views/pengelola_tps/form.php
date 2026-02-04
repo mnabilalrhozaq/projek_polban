@@ -6,6 +6,9 @@
     <title><?= $title ?? 'Form Input Sampah TPS' ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 </head>
 <body>
     <?= $this->include('partials/sidebar') ?>
@@ -57,30 +60,74 @@
                 </h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="<?= base_url('/pengelola-tps/waste/save-tps') ?>" id="tpsWasteForm">
+                <form method="POST" action="<?= base_url('/pengelola-tps/waste/save') ?>" id="tpsWasteForm">
                     <?= csrf_field() ?>
                     
                     <div class="row">
                         <!-- Kolom Kiri -->
                         <div class="col-md-6">
-                            <!-- Tanggal -->
+                            <!-- Nama Pelapor (Auto-fill, Read-only) -->
                             <div class="mb-3">
-                                <label for="tanggal" class="form-label">
-                                    <i class="fas fa-calendar"></i> Tanggal <span class="text-danger">*</span>
+                                <label for="nama_pelapor" class="form-label">
+                                    <i class="fas fa-user"></i> Nama Pelapor <span class="text-danger">*</span>
                                 </label>
-                                <input type="date" class="form-control" id="tanggal" name="tanggal" 
-                                       value="<?= old('tanggal', date('Y-m-d')) ?>" required>
-                                <div class="form-text">Tanggal penerimaan sampah di TPS</div>
+                                <input type="text" class="form-control" id="nama_pelapor" name="nama_pelapor" 
+                                       value="<?= session()->get('user')['nama_lengkap'] ?? '' ?>" readonly 
+                                       style="background-color: #e9ecef;">
+                                <div class="form-text">Otomatis dari akun yang login</div>
                             </div>
 
-                            <!-- Pengirim Gedung -->
+                            <!-- Gedung Pelapor (Manual Input) -->
                             <div class="mb-3">
-                                <label for="pengirim_gedung" class="form-label">
-                                    <i class="fas fa-building"></i> Gedung Pengirim <span class="text-danger">*</span>
+                                <label for="gedung_pelapor" class="form-label">
+                                    <i class="fas fa-building"></i> Gedung Pelapor <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control" id="pengirim_gedung" name="pengirim_gedung" 
-                                       value="<?= old('pengirim_gedung') ?>" placeholder="Contoh: Gedung A, Kantin, Lab Komputer" required>
+                                <input type="text" class="form-control" id="gedung_pelapor" name="gedung_pelapor" 
+                                       value="<?= old('gedung_pelapor') ?>" placeholder="Contoh: Gedung A, Kantin, Lab Komputer" required maxlength="255">
                                 <div class="form-text">Nama gedung atau lokasi asal sampah</div>
+                            </div>
+
+                            <!-- Bukti Foto (Upload) -->
+                            <div class="mb-3">
+                                <label for="bukti_foto" class="form-label">
+                                    <i class="fas fa-camera"></i> Bukti Foto <span class="text-danger">*</span>
+                                </label>
+                                <input type="file" class="form-control" id="bukti_foto" name="bukti_foto" 
+                                       accept="image/jpeg,image/jpg,image/png" required>
+                                <div class="form-text">Format: JPG/PNG, Maksimal 5MB</div>
+                                <!-- Preview Container -->
+                                <div id="preview_container" style="display: none; margin-top: 10px;">
+                                    <img id="preview_image" src="" alt="Preview" class="img-thumbnail" style="max-width: 300px; max-height: 300px;">
+                                </div>
+                            </div>
+
+                            <!-- Tanggal dan Waktu (Auto-fill, Read-only) -->
+                            <div class="mb-3">
+                                <label for="tanggal_waktu" class="form-label">
+                                    <i class="fas fa-clock"></i> Tanggal dan Waktu <span class="text-danger">*</span>
+                                </label>
+                                <input type="datetime-local" class="form-control" id="tanggal_waktu" name="tanggal_waktu" 
+                                       value="<?= date('Y-m-d\TH:i') ?>" readonly 
+                                       style="background-color: #e9ecef;">
+                                <div class="form-text">Otomatis saat form dibuka</div>
+                            </div>
+
+                            <!-- Unit Pengirim -->
+                            <div class="mb-3">
+                                <label for="unit_pengirim" class="form-label">
+                                    <i class="fas fa-university"></i> Unit Pengirim <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select select2-unit" id="unit_pengirim" name="unit_pengirim" required>
+                                    <option value="">-- Pilih Unit Pengirim --</option>
+                                    <?php if (!empty($unitList)): ?>
+                                        <?php foreach ($unitList as $unit): ?>
+                                            <option value="<?= $unit['id'] ?>" <?= old('unit_pengirim') == $unit['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($unit['nama_unit']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                                <div class="form-text">Pilih unit/fakultas/jurusan pengirim sampah</div>
                             </div>
 
                             <!-- Jenis Sampah -->
@@ -88,25 +135,21 @@
                                 <label for="jenis_sampah" class="form-label">
                                     <i class="fas fa-trash-alt"></i> Jenis Sampah <span class="text-danger">*</span>
                                 </label>
-                                <select class="form-select" id="jenis_sampah" name="jenis_sampah" required onchange="updateKategoriSampah()">
+                                <select class="form-select select2-jenis" id="jenis_sampah" name="jenis_sampah" required onchange="updateKategoriSampah()">
                                     <option value="">-- Pilih Jenis Sampah --</option>
-                                    <?php if (!empty($categories)): ?>
-                                        <?php foreach ($categories as $category): ?>
-                                            <option value="<?= htmlspecialchars($category['nama_jenis']) ?>" 
+                                    <?php if (!empty($allCategories)): ?>
+                                        <?php foreach ($allCategories as $category): ?>
+                                            <option value="<?= $category['id'] ?>" 
                                                     data-kategori="<?= htmlspecialchars($category['jenis_sampah']) ?>"
                                                     data-harga="<?= $category['harga_per_satuan'] ?>"
                                                     data-dapat-dijual="<?= $category['dapat_dijual'] ?>"
-                                                    <?= old('jenis_sampah') === $category['nama_jenis'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($category['nama_jenis']) ?> (<?= htmlspecialchars($category['jenis_sampah']) ?>)
+                                                    <?= old('jenis_sampah') == $category['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($category['jenis_sampah']) ?> - <?= htmlspecialchars($category['nama_jenis']) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <!-- Fallback jika tidak ada data -->
-                                        <option value="Plastik">Plastik</option>
-                                        <option value="Kertas">Kertas</option>
-                                        <option value="Logam">Logam</option>
-                                        <option value="Organik">Organik</option>
-                                        <option value="Residu">Residu</option>
+                                        <option value="">Tidak ada data jenis sampah</option>
                                     <?php endif; ?>
                                 </select>
                                 <div class="form-text">Pilih jenis sampah yang diterima</div>
@@ -248,35 +291,90 @@
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-    // Harga per kg untuk setiap jenis sampah
-    const hargaPerKg = {
-        'Plastik': 2000,
-        'Kertas': 1500,
-        'Logam': 5000,
-        'Organik': 0,
-        'Residu': 0
-    };
+    // Initialize Select2
+    $(document).ready(function() {
+        // Initialize Select2 for Unit dropdown
+        $('.select2-unit').select2({
+            theme: 'bootstrap-5',
+            placeholder: '-- Pilih Unit Pengirim --',
+            allowClear: true,
+            width: '100%'
+        });
 
-    // Jenis sampah yang bisa dijual
-    const bisaDijual = ['Plastik', 'Kertas', 'Logam'];
+        // Initialize Select2 for Jenis Sampah dropdown
+        $('.select2-jenis').select2({
+            theme: 'bootstrap-5',
+            placeholder: '-- Pilih Jenis Sampah --',
+            allowClear: true,
+            width: '100%'
+        });
+
+        // Trigger update when jenis sampah changes
+        $('.select2-jenis').on('change', function() {
+            updateKategoriSampah();
+        });
+        
+        // Initialize image preview
+        document.getElementById('bukti_foto').addEventListener('change', handleImagePreview);
+    });
+
+    function handleImagePreview(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Validate file size (5MB = 5242880 bytes)
+            if (file.size > 5242880) {
+                alert('Ukuran file maksimal 5MB');
+                e.target.value = '';
+                document.getElementById('preview_container').style.display = 'none';
+                return;
+            }
+            
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!validTypes.includes(file.type)) {
+                alert('File harus berformat JPG atau PNG');
+                e.target.value = '';
+                document.getElementById('preview_container').style.display = 'none';
+                return;
+            }
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('preview_image').src = e.target.result;
+                document.getElementById('preview_container').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            document.getElementById('preview_container').style.display = 'none';
+        }
+    }
 
     function updateKategoriSampah() {
-        const jenisSampah = document.getElementById('jenis_sampah').value;
+        const jenisSampahSelect = document.getElementById('jenis_sampah');
+        const selectedOption = jenisSampahSelect.options[jenisSampahSelect.selectedIndex];
         const kategoriSelect = document.getElementById('kategori_sampah');
         
-        if (jenisSampah) {
-            if (bisaDijual.includes(jenisSampah)) {
+        if (selectedOption && selectedOption.value) {
+            const dapatDijual = selectedOption.getAttribute('data-dapat-dijual');
+            const harga = selectedOption.getAttribute('data-harga');
+            const kategori = selectedOption.getAttribute('data-kategori');
+            
+            if (dapatDijual === '1') {
                 // Bisa dijual - enable both options
                 kategoriSelect.innerHTML = `
                     <option value="">-- Pilih Kategori --</option>
-                    <option value="bisa_dijual">Bisa Dijual</option>
+                    <option value="bisa_dijual" selected>Bisa Dijual</option>
                     <option value="tidak_bisa_dijual">Tidak Bisa Dijual</option>
                 `;
                 
                 // Show harga info
-                showHargaInfo(jenisSampah);
+                showHargaInfo(kategori, harga);
             } else {
                 // Tidak bisa dijual - only one option
                 kategoriSelect.innerHTML = `
@@ -297,11 +395,12 @@
         toggleNilaiRupiah();
     }
 
-    function showHargaInfo(jenisSampah) {
+    function showHargaInfo(jenisSampah, harga) {
         const hargaInfo = document.getElementById('harga_info');
         const hargaDetail = document.getElementById('harga_detail');
         
-        hargaDetail.innerHTML = `${jenisSampah}: Rp ${hargaPerKg[jenisSampah].toLocaleString()}/kg`;
+        const hargaFormatted = new Intl.NumberFormat('id-ID').format(harga);
+        hargaDetail.innerHTML = `${jenisSampah}: Rp ${hargaFormatted}/kg`;
         hargaInfo.style.display = 'block';
     }
 
@@ -310,13 +409,21 @@
     }
 
     function toggleNilaiRupiah() {
-        const jenisSampah = document.getElementById('jenis_sampah').value;
+        const jenisSampahSelect = document.getElementById('jenis_sampah');
+        const selectedOption = jenisSampahSelect.options[jenisSampahSelect.selectedIndex];
         const kategori = document.getElementById('kategori_sampah').value;
         const nilaiPreview = document.getElementById('nilai_rupiah_preview');
         
-        if (kategori === 'bisa_dijual' && bisaDijual.includes(jenisSampah)) {
-            nilaiPreview.style.display = 'block';
-            calculateNilaiRupiah();
+        if (selectedOption && selectedOption.value && kategori === 'bisa_dijual') {
+            const dapatDijual = selectedOption.getAttribute('data-dapat-dijual');
+            
+            if (dapatDijual === '1') {
+                nilaiPreview.style.display = 'block';
+                calculateNilaiRupiah();
+            } else {
+                nilaiPreview.style.display = 'none';
+                document.getElementById('preview_nilai').value = '';
+            }
         } else {
             nilaiPreview.style.display = 'none';
             document.getElementById('preview_nilai').value = '';
@@ -324,23 +431,30 @@
     }
 
     function calculateNilaiRupiah() {
-        const jenisSampah = document.getElementById('jenis_sampah').value;
+        const jenisSampahSelect = document.getElementById('jenis_sampah');
+        const selectedOption = jenisSampahSelect.options[jenisSampahSelect.selectedIndex];
         const kategori = document.getElementById('kategori_sampah').value;
         const jumlah = parseFloat(document.getElementById('jumlah').value) || 0;
         const satuan = document.getElementById('satuan').value;
         
-        if (kategori === 'bisa_dijual' && bisaDijual.includes(jenisSampah) && jumlah > 0) {
-            let jumlahKg = jumlah;
+        if (selectedOption && selectedOption.value && kategori === 'bisa_dijual' && jumlah > 0) {
+            const dapatDijual = selectedOption.getAttribute('data-dapat-dijual');
             
-            // Convert to kg if needed
-            if (satuan === 'ton') {
-                jumlahKg = jumlah * 1000;
+            if (dapatDijual === '1') {
+                let jumlahKg = jumlah;
+                
+                // Convert to kg if needed
+                if (satuan === 'ton') {
+                    jumlahKg = jumlah * 1000;
+                }
+                
+                const harga = parseFloat(selectedOption.getAttribute('data-harga')) || 0;
+                const nilaiTotal = jumlahKg * harga;
+                
+                document.getElementById('preview_nilai').value = new Intl.NumberFormat('id-ID').format(nilaiTotal);
+            } else {
+                document.getElementById('preview_nilai').value = '';
             }
-            
-            const harga = hargaPerKg[jenisSampah] || 0;
-            const nilaiTotal = jumlahKg * harga;
-            
-            document.getElementById('preview_nilai').value = nilaiTotal.toLocaleString();
         } else {
             document.getElementById('preview_nilai').value = '';
         }
@@ -348,7 +462,44 @@
 
     // Form validation
     document.getElementById('tpsWasteForm').addEventListener('submit', function(e) {
+        const namaPelapor = document.getElementById('nama_pelapor').value;
+        const gedungPelapor = document.getElementById('gedung_pelapor').value;
+        const buktiFoto = document.getElementById('bukti_foto').files[0];
+        const unitPengirim = document.getElementById('unit_pengirim').value;
+        const jenisSampah = document.getElementById('jenis_sampah').value;
         const jumlah = parseFloat(document.getElementById('jumlah').value);
+        
+        if (!namaPelapor) {
+            e.preventDefault();
+            alert('Nama pelapor harus diisi');
+            return false;
+        }
+        
+        if (!gedungPelapor || gedungPelapor.trim() === '') {
+            e.preventDefault();
+            alert('Gedung pelapor harus diisi');
+            document.getElementById('gedung_pelapor').focus();
+            return false;
+        }
+        
+        if (!buktiFoto) {
+            e.preventDefault();
+            alert('Bukti foto harus diupload');
+            document.getElementById('bukti_foto').focus();
+            return false;
+        }
+        
+        if (!unitPengirim) {
+            e.preventDefault();
+            alert('Unit pengirim harus dipilih');
+            return false;
+        }
+        
+        if (!jenisSampah) {
+            e.preventDefault();
+            alert('Jenis sampah harus dipilih');
+            return false;
+        }
         
         if (jumlah <= 0) {
             e.preventDefault();

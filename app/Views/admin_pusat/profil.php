@@ -8,6 +8,8 @@
     <title><?= $title ?? 'Profil Akun' ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Mobile Responsive CSS -->
+    <link href="<?= base_url('/css/mobile-responsive.css') ?>" rel="stylesheet">
 </head>
 <body>
     <?= $this->include('partials/sidebar') ?>
@@ -279,6 +281,8 @@
             }, 5000);
         }
     </script>
+    <!-- Mobile Menu JS -->
+    <script src="<?= base_url('/js/mobile-menu.js') ?>"></script>
 </body>
 </html>
 
@@ -416,6 +420,49 @@ body {
     cursor: not-allowed;
 }
 
+/* Fix input-group for password fields */
+.input-group {
+    position: relative;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    width: 100%;
+}
+
+.input-group .form-control {
+    position: relative;
+    flex: 1 1 auto;
+    width: 1%;
+    min-width: 0;
+    padding-right: 45px; /* Space for button */
+}
+
+.input-group .btn {
+    position: relative;
+    z-index: 2;
+    margin-left: -1px;
+}
+
+.input-group .btn-outline-secondary {
+    border-color: #dee2e6;
+    color: #6c757d;
+    background-color: #fff;
+    padding: 10px 15px;
+    border-radius: 0 8px 8px 0;
+    border-left: 1px solid #dee2e6;
+}
+
+.input-group .btn-outline-secondary:hover {
+    background-color: #f8f9fa;
+    color: #495057;
+    border-color: #dee2e6;
+}
+
+.input-group .btn-outline-secondary:focus {
+    box-shadow: none;
+    border-color: #1e3c72;
+}
+
 .btn {
     border-radius: 8px;
     font-weight: 500;
@@ -436,12 +483,114 @@ body {
 @media (max-width: 768px) {
     .main-content {
         margin-left: 0;
-        padding: 20px;
+        padding: 15px 10px;
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+
+    .page-header {
+        padding: 15px 0;
+        margin-bottom: 20px;
+    }
+
+    .header-content h1 {
+        font-size: 22px;
+    }
+
+    .header-content p {
+        font-size: 14px;
     }
     
     .profile-card {
         position: relative;
         top: 0;
+        margin-bottom: 20px;
+    }
+
+    .profile-avatar {
+        font-size: 80px;
+    }
+
+    .profile-name {
+        font-size: 20px;
+    }
+
+    .card-header {
+        padding: 12px 15px;
+    }
+
+    .card-header h3 {
+        font-size: 16px;
+    }
+
+    .card-body {
+        padding: 15px;
+    }
+
+    .info-item {
+        padding: 10px 0;
+    }
+
+    .info-item span {
+        font-size: 13px;
+    }
+
+    .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    /* Fix input-group on mobile */
+    .input-group {
+        display: flex;
+        flex-wrap: nowrap;
+    }
+
+    .input-group .form-control {
+        flex: 1;
+        min-width: 0;
+        border-radius: 8px 0 0 8px;
+    }
+
+    .input-group .btn-outline-secondary {
+        flex-shrink: 0;
+        width: 45px;
+        padding: 10px;
+        border-radius: 0 8px 8px 0;
+    }
+
+    .row {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .row > [class*="col-"] {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: 10px 5px;
+    }
+
+    .profile-avatar {
+        font-size: 60px;
+    }
+
+    .profile-name {
+        font-size: 18px;
+    }
+
+    .card-body {
+        padding: 12px;
+    }
+
+    /* Ensure input-group stays inline on small mobile */
+    .input-group .btn-outline-secondary {
+        width: 40px;
+        padding: 8px;
     }
 }
 </style>

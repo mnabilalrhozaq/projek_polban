@@ -37,6 +37,8 @@ class Dashboard extends BaseController
                 'wasteManagementSummary' => $data['wasteManagementSummary'] ?? [],
                 'recent_waste' => $data['recent_waste'] ?? [],
                 'monthly_summary' => $data['monthly_summary'] ?? [],
+                'approved_data' => $data['approved_data'] ?? [],
+                'rejected_data' => $data['rejected_data'] ?? [],
                 'widgets' => []
             ];
 
@@ -60,6 +62,8 @@ class Dashboard extends BaseController
                 'recent_waste' => [],
                 'monthly_summary' => [],
                 'widgets' => [],
+                'approved_data' => [],
+                'rejected_data' => [],
                 'error' => 'Terjadi kesalahan saat memuat dashboard: ' . $e->getMessage()
             ]);
         }

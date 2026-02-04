@@ -26,7 +26,12 @@ class LaporanWaste extends BaseController
                 'start_date' => $this->request->getGet('start_date'),
                 'end_date' => $this->request->getGet('end_date'),
                 'status' => $this->request->getGet('status'),
-                'unit_id' => $this->request->getGet('unit_id')
+                'unit_id' => $this->request->getGet('unit_id'),
+                'filter_bulan' => $this->request->getGet('filter_bulan'),
+                'filter_tahun' => $this->request->getGet('filter_tahun'),
+                'filter_minggu' => $this->request->getGet('filter_minggu'),
+                'filter_gedung' => $this->request->getGet('filter_gedung'),
+                'filter_pelapor' => $this->request->getGet('filter_pelapor')
             ];
             
             // Get page for each section
@@ -38,7 +43,8 @@ class LaporanWaste extends BaseController
                 'disetujui' => $section === 'disetujui' ? $page : 1,
                 'ditolak' => $section === 'ditolak' ? $page : 1,
                 'rekap_jenis' => $section === 'rekap_jenis' ? $page : 1,
-                'rekap_unit' => $section === 'rekap_unit' ? $page : 1
+                'rekap_unit' => $section === 'rekap_unit' ? $page : 1,
+                'detail_rekap' => $section === 'detail_rekap' ? $page : 1
             ];
 
             $data = $this->laporanService->getLaporanData($filters, $pages, 10);
@@ -47,6 +53,7 @@ class LaporanWaste extends BaseController
                 'title' => 'Laporan Waste',
                 'rekap_jenis' => $data['rekap_jenis'],
                 'rekap_unit' => $data['rekap_unit'],
+                'detail_rekap' => $data['detail_rekap'],
                 'data_disetujui' => $data['data_disetujui'],
                 'data_ditolak' => $data['data_ditolak'],
                 'units' => $data['units'],
@@ -66,6 +73,7 @@ class LaporanWaste extends BaseController
                 'title' => 'Laporan Waste',
                 'rekap_jenis' => [],
                 'rekap_unit' => [],
+                'detail_rekap' => [],
                 'data_disetujui' => [],
                 'data_ditolak' => [],
                 'units' => [],
@@ -157,6 +165,96 @@ class LaporanWaste extends BaseController
         } catch (\Exception $e) {
             log_message('error', 'Export CSV Error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Terjadi kesalahan saat export CSV');
+        }
+    }
+
+    public function exportExcel()
+    {
+        try {
+            if (!$this->validateSession()) {
+                return redirect()->to('/auth/login');
+            }
+
+            $filters = [
+                'start_date' => $this->request->getGet('start_date'),
+                'end_date' => $this->request->getGet('end_date'),
+                'status' => $this->request->getGet('status'),
+                'unit_id' => $this->request->getGet('unit_id')
+            ];
+
+            // Load helper
+            helper('excel');
+
+            // This will output Excel and exit
+            $this->laporanService->exportExcel($filters);
+            
+            // Code below will not be executed because exportExcel() calls exit()
+            exit;
+
+        } catch (\Exception $e) {
+            log_message('error', 'Export Excel Error: ' . $e->getMessage());
+            
+            // Show error page instead of redirect
+            echo '<html><body>';
+            echo '<h1>Error Export Excel</h1>';
+            echo '<p>Terjadi kesalahan: ' . htmlspecialchars($e->getMessage()) . '</p>';
+            echo '<p><a href="' . base_url('/admin-pusat/laporan-waste') . '">Kembali ke Laporan</a></p>';
+            echo '</body></html>';
+            exit;
+        }
+    }
+
+    /**
+     * Get detail rekap jenis sampah (AJAX endpoint)
+     * Returns rincian per gedung dan pelapor
+     */
+    public function getDetailRekapJenis()
+    {
+        try {
+            // Debug: Check if method is called
+            log_message('info', 'getDetailRekapJenis called');
+            
+            if (!$this->validateSession()) {
+                log_message('error', 'Session validation failed');
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Session tidak valid'
+                ])->setStatusCode(401);
+            }
+
+            $jenisSampah = $this->request->getGet('jenis_sampah');
+            log_message('info', 'Jenis sampah: ' . $jenisSampah);
+            
+            if (empty($jenisSampah)) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Jenis sampah harus diisi'
+                ])->setStatusCode(400);
+            }
+
+            $filters = [
+                'start_date' => $this->request->getGet('start_date'),
+                'end_date' => $this->request->getGet('end_date'),
+                'unit_id' => $this->request->getGet('unit_id')
+            ];
+            
+            log_message('info', 'Filters: ' . json_encode($filters));
+
+            $result = $this->laporanService->getDetailRekapJenis($jenisSampah, $filters);
+            
+            log_message('info', 'Result success: ' . ($result['success'] ? 'true' : 'false'));
+
+            return $this->response->setJSON($result);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Get Detail Rekap Jenis Controller Error: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+            
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat memuat detail',
+                'error' => $e->getMessage()
+            ])->setStatusCode(500);
         }
     }
 

@@ -134,9 +134,11 @@ class DashboardService
         }
 
         try {
-            $maxItems = 5; // Default limit
+            $maxItems = 10; // Increase limit to show more activities
             
             $recentWaste = $this->wasteModel
+                ->select('waste_management.*, users.nama_lengkap as reviewer_name')
+                ->join('users', 'users.id = waste_management.reviewed_by', 'left')
                 ->where('waste_management.unit_id', $unitId)
                 ->orderBy('waste_management.updated_at', 'DESC')
                 ->limit($maxItems)
@@ -145,9 +147,18 @@ class DashboardService
             $activities = [];
             foreach ($recentWaste as $waste) {
                 $activities[] = [
+                    'id' => $waste['id'],
                     'icon' => $this->getStatusIcon($waste['status']),
                     'message' => $this->getActivityMessage($waste),
-                    'time' => $this->timeAgo($waste['updated_at'])
+                    'time' => $this->timeAgo($waste['updated_at']),
+                    'status' => $waste['status'],
+                    'jenis_sampah' => $waste['jenis_sampah'] ?? 'N/A',
+                    'berat_kg' => $waste['berat_kg'] ?? 0,
+                    'nilai_rupiah' => $waste['nilai_rupiah'] ?? 0,
+                    'catatan_review' => $waste['catatan_review'] ?? '',
+                    'reviewer_name' => $waste['reviewer_name'] ?? 'Admin',
+                    'tanggal_review' => $waste['reviewed_at'] ?? $waste['updated_at'],
+                    'has_detail' => in_array($waste['status'], ['disetujui', 'ditolak'])
                 ];
             }
             

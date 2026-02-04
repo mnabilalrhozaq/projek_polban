@@ -166,16 +166,39 @@ if (!function_exists('getActionIcon')) {
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         color: white;
         padding: 20px 25px;
-        display: flex;
-        align-items: center;
-        gap: 15px;
     }
 
     .card-header h3 {
         margin: 0;
         font-size: 18px;
         font-weight: 600;
-        flex: 1;
+    }
+
+    .search-box .input-group {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .search-box .input-group-text {
+        border: none;
+        padding: 8px 12px;
+    }
+
+    .search-box .form-control {
+        border: none;
+        padding: 8px 12px;
+        color: #2c3e50;
+    }
+
+    .search-box .form-control:focus {
+        outline: none;
+        box-shadow: none;
+    }
+
+    .search-box .form-control::placeholder {
+        color: #adb5bd;
     }
 
     .card-body {
@@ -328,6 +351,8 @@ if (!function_exists('getActionIcon')) {
         .main-content {
             margin-left: 0;
             padding: 20px;
+            max-width: 100vw;
+            overflow-x: hidden;
         }
         
         .page-header {
@@ -343,6 +368,55 @@ if (!function_exists('getActionIcon')) {
         .header-actions {
             width: 100%;
             justify-content: flex-start;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .header-actions .btn {
+            width: 100%;
+        }
+
+        .card-header .d-flex {
+            flex-direction: column !important;
+            gap: 15px;
+            align-items: flex-start !important;
+        }
+
+        .search-box {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        .btn-group {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+            font-size: 12px;
+            padding: 6px 8px;
+            width: 100%;
+            border-radius: 8px !important;
+            margin-bottom: 5px;
+        }
+
+        .table-responsive {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: row;
+            gap: 5px;
+            flex-wrap: nowrap;
+        }
+
+        .action-buttons .btn {
+            padding: 4px 8px;
+            font-size: 11px;
         }
     }
     </style>
@@ -430,26 +504,45 @@ if (!function_exists('getActionIcon')) {
         <!-- Harga Sampah Table -->
         <div class="card">
             <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center w-100">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="fas fa-table"></i>
-                        <h3 class="mb-0">Daftar Harga Sampah</h3>
+                <div class="w-100">
+                    <!-- Title and Search Bar Row -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-table"></i>
+                            <h3 class="mb-0">Daftar Harga Sampah</h3>
+                        </div>
+                        
+                        <!-- Search Bar -->
+                        <div class="search-box" style="width: 300px;">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="fas fa-search text-muted"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control border-start-0 ps-0" 
+                                       id="searchInput" 
+                                       placeholder="Cari kategori, jenis, atau harga..."
+                                       style="box-shadow: none;">
+                            </div>
+                        </div>
                     </div>
                     
-                    <!-- Filter Status -->
-                    <div class="btn-group" role="group">
-                        <a href="<?= base_url('/admin-pusat/manajemen-harga') ?>" 
-                           class="btn btn-sm <?= !isset($_GET['status']) ? 'btn-primary' : 'btn-outline-primary' ?>">
-                            <i class="fas fa-list"></i> Semua (<?= $statistics['total'] ?? 0 ?>)
-                        </a>
-                        <a href="<?= base_url('/admin-pusat/manajemen-harga?status=aktif') ?>" 
-                           class="btn btn-sm <?= (isset($_GET['status']) && $_GET['status'] == 'aktif') ? 'btn-success' : 'btn-outline-success' ?>">
-                            <i class="fas fa-check-circle"></i> Aktif (<?= $statistics['aktif'] ?? 0 ?>)
-                        </a>
-                        <a href="<?= base_url('/admin-pusat/manajemen-harga?status=nonaktif') ?>" 
-                           class="btn btn-sm <?= (isset($_GET['status']) && $_GET['status'] == 'nonaktif') ? 'btn-secondary' : 'btn-outline-secondary' ?>">
-                            <i class="fas fa-times-circle"></i> Nonaktif (<?= ($statistics['total'] ?? 0) - ($statistics['aktif'] ?? 0) ?>)
-                        </a>
+                    <!-- Filter Status Row -->
+                    <div class="d-flex justify-content-center">
+                        <div class="btn-group" role="group">
+                            <a href="<?= base_url('/admin-pusat/manajemen-harga') ?>" 
+                               class="btn btn-sm <?= !isset($_GET['status']) ? 'btn-primary' : 'btn-outline-primary' ?>">
+                                <i class="fas fa-list"></i> Semua (<?= $statistics['total'] ?? 0 ?>)
+                            </a>
+                            <a href="<?= base_url('/admin-pusat/manajemen-harga?status=aktif') ?>" 
+                               class="btn btn-sm <?= (isset($_GET['status']) && $_GET['status'] == 'aktif') ? 'btn-success' : 'btn-outline-success' ?>">
+                                <i class="fas fa-check-circle"></i> Aktif (<?= $statistics['aktif'] ?? 0 ?>)
+                            </a>
+                            <a href="<?= base_url('/admin-pusat/manajemen-harga?status=nonaktif') ?>" 
+                               class="btn btn-sm <?= (isset($_GET['status']) && $_GET['status'] == 'nonaktif') ? 'btn-secondary' : 'btn-outline-secondary' ?>">
+                                <i class="fas fa-times-circle"></i> Nonaktif (<?= ($statistics['total'] ?? 0) - ($statistics['aktif'] ?? 0) ?>)
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1163,6 +1256,199 @@ if (!function_exists('getActionIcon')) {
                 }
             }, 5000);
         }
+
+        // Search functionality with pagination handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const tableBody = document.querySelector('.table tbody');
+            const paginationContainer = document.querySelector('.pagination')?.closest('.mt-4');
+            let originalTableHTML = tableBody.innerHTML; // Store original HTML of current page
+            let isSearchActive = false;
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase().trim();
+                    
+                    if (searchTerm === '') {
+                        // Reset to original state - restore current page data
+                        if (paginationContainer) {
+                            paginationContainer.style.display = 'block';
+                        }
+                        
+                        // Restore original table content (current page)
+                        if (isSearchActive) {
+                            tableBody.innerHTML = originalTableHTML;
+                            isSearchActive = false;
+                        }
+                    } else {
+                        // Save original HTML before search (only if not already searching)
+                        if (!isSearchActive) {
+                            originalTableHTML = tableBody.innerHTML;
+                        }
+                        
+                        // Hide pagination when searching
+                        if (paginationContainer) {
+                            paginationContainer.style.display = 'none';
+                        }
+                        
+                        isSearchActive = true;
+                        
+                        // Fetch all data from server for search
+                        fetchAllDataAndSearch(searchTerm);
+                    }
+                });
+            }
+            
+            function fetchAllDataAndSearch(searchTerm) {
+                // Show loading indicator
+                const loadingRow = document.createElement('tr');
+                loadingRow.innerHTML = '<td colspan="8" class="text-center"><i class="fas fa-spinner fa-spin"></i> Mencari...</td>';
+                
+                // Get current filter status
+                const urlParams = new URLSearchParams(window.location.search);
+                const statusFilter = urlParams.get('status') || '';
+                
+                // Fetch all data without pagination
+                fetch(`<?= base_url('/admin-pusat/manajemen-harga/search') ?>?q=${encodeURIComponent(searchTerm)}&status=${statusFilter}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            displaySearchResults(data.results, searchTerm);
+                        } else {
+                            // Fallback to client-side search
+                            clientSideSearch(searchTerm);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Search error:', error);
+                        // Fallback to client-side search
+                        clientSideSearch(searchTerm);
+                    });
+            }
+            
+            function clientSideSearch(searchTerm) {
+                // Client-side search on current page data
+                tableRows.forEach(row => {
+                    const kategori = row.cells[0]?.textContent.toLowerCase() || '';
+                    const jenis = row.cells[1]?.textContent.toLowerCase() || '';
+                    const harga = row.cells[2]?.textContent.toLowerCase() || '';
+                    
+                    const matches = kategori.includes(searchTerm) || 
+                                  jenis.includes(searchTerm) || 
+                                  harga.includes(searchTerm);
+                    
+                    row.style.display = matches ? '' : 'none';
+                });
+            }
+            
+            function displaySearchResults(results, searchTerm) {
+                // Clear table
+                tableBody.innerHTML = '';
+                
+                if (results.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Tidak ada hasil untuk "' + searchTerm + '"</td></tr>';
+                    return;
+                }
+                
+                // Display all search results
+                results.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    if (!item.status_aktif) {
+                        row.classList.add('table-secondary', 'opacity-50');
+                    }
+                    
+                    row.innerHTML = `
+                        <td>
+                            <div class="jenis-info">
+                                <i class="fas fa-${getJenisIcon(item.jenis_sampah)} text-primary"></i>
+                                <strong>${escapeHtml(item.jenis_sampah)}</strong>
+                                ${!item.status_aktif ? '<span class="badge bg-secondary ms-2">Nonaktif</span>' : ''}
+                            </div>
+                        </td>
+                        <td>${escapeHtml(item.nama_jenis)}</td>
+                        <td>
+                            <div class="harga-display">
+                                <strong class="text-success">
+                                    Rp ${formatNumber(item.harga_per_satuan)}
+                                </strong>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">${escapeHtml(item.satuan)}</span>
+                        </td>
+                        <td>
+                            ${item.dapat_dijual ? 
+                                '<span class="badge bg-success"><i class="fas fa-money-bill-wave"></i> Bisa Dijual</span>' : 
+                                '<span class="badge bg-secondary"><i class="fas fa-times"></i> Tidak Bisa Dijual</span>'}
+                        </td>
+                        <td>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" ${item.status_aktif ? 'checked' : ''} disabled style="cursor: not-allowed;">
+                                <label class="form-check-label text-muted">
+                                    ${item.status_aktif ? 'Aktif' : 'Nonaktif'}
+                                </label>
+                            </div>
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                ${formatDate(item.updated_at)}
+                            </small>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button type="button" class="btn btn-sm btn-warning" 
+                                        onclick="editHarga(${item.id})" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger" 
+                                        onclick="deleteHarga(${item.id}, '${escapeHtml(item.jenis_sampah)}')" 
+                                        title="Hapus">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+            }
+            
+            // Helper functions
+            function getJenisIcon(jenis) {
+                const icons = {
+                    'Plastik': 'wine-bottle',
+                    'Kertas': 'file-alt',
+                    'Logam': 'cog',
+                    'Organik': 'seedling',
+                    'Residu': 'trash-alt',
+                    'Elektronik': 'laptop',
+                    'Anorganik': 'box',
+                    'Besi': 'wrench'
+                };
+                return icons[jenis] || 'recycle';
+            }
+            
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            function formatNumber(num) {
+                return new Intl.NumberFormat('id-ID').format(num);
+            }
+            
+            function formatDate(dateStr) {
+                const date = new Date(dateStr);
+                return date.toLocaleString('id-ID', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        });
     </script>
     <!-- Mobile Menu JS -->
     <script src="<?= base_url('/js/mobile-menu.js') ?>"></script>

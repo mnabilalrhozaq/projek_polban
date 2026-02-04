@@ -140,7 +140,7 @@ class WasteService
                 'reviewed_by' => session()->get('user')['id'],
                 'reviewed_at' => date('Y-m-d H:i:s'),
                 'review_notes' => $data['catatan'] ?? 'Disetujui oleh admin',
-                'created_by' => null, // Kolom created_by tidak ada di waste_management
+                'created_by' => $waste['user_id'] ?? $waste['created_by'] ?? null,
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
@@ -207,19 +207,14 @@ class WasteService
                 'reviewed_by' => session()->get('user')['id'],
                 'reviewed_at' => date('Y-m-d H:i:s'),
                 'review_notes' => $data['catatan'],
-                'created_by' => null, // Kolom created_by tidak ada di waste_management
+                'created_by' => $waste['user_id'] ?? $waste['created_by'] ?? null,
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
             $db->table('laporan_waste')->insert($laporanData);
             
-            // 2. Update status and set action_timestamp (will be auto-deleted after 2 days)
-            $this->wasteModel->update($id, [
-                'status' => 'ditolak',
-                'action_timestamp' => date('Y-m-d H:i:s'),
-                'catatan_admin' => $data['catatan'],
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
+            // 2. Hapus data dari waste_management (sama seperti approve)
+            $this->wasteModel->delete($id);
             
             $db->transComplete();
             
@@ -283,8 +278,9 @@ class WasteService
             $twoDaysAgo = date('Y-m-d H:i:s', strtotime('-2 days'));
             
             $result = $db->table('waste_management')
-                ->select('waste_management.*, unit.nama_unit')
+                ->select('waste_management.*, unit.nama_unit, master_harga_sampah.nama_jenis')
                 ->join('unit', 'unit.id = waste_management.unit_id', 'left')
+                ->join('master_harga_sampah', 'master_harga_sampah.jenis_sampah = waste_management.jenis_sampah', 'left')
                 ->groupStart()
                     ->whereIn('waste_management.status', ['draft', 'dikirim', 'review'])
                     ->orGroupStart()

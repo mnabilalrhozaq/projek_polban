@@ -67,23 +67,37 @@ class WasteService
             
             // Determine status based on action
             $status = 'draft';
-            if (isset($data['status_action']) && $data['status_action'] === 'kirim') {
-                $status = 'dikirim';
+            if (isset($data['status_action']) && $data['status_action'] === 'dikirim_ke_tps') {
+                $status = 'dikirim_ke_tps';
             }
             
             // Get satuan from input, default to 'kg' if not provided
             $satuan = $data['satuan'] ?? 'kg';
             
+            // Get unit pengirim (optional)
+            $unitPengirim = isset($data['unit_pengirim']) && !empty($data['unit_pengirim']) ? $data['unit_pengirim'] : null;
+            
+            // Extract date from datetime
+            $tanggalWaktu = $data['tanggal_waktu'] ?? date('Y-m-d H:i:s');
+            $tanggal = date('Y-m-d', strtotime($tanggalWaktu));
+            
             $wasteData = [
                 'unit_id' => $user['unit_id'],
+                'unit_pengirim_id' => $unitPengirim,
                 'berat_kg' => $data['berat_kg'],
-                'tanggal' => date('Y-m-d'),
+                'tanggal' => $tanggal,
                 'jenis_sampah' => $category['jenis_sampah'],
                 'satuan' => $satuan,
                 'jumlah' => $data['berat_kg'],
-                'gedung' => 'TPS',
+                'gedung' => $data['gedung_pelapor'] ?? 'TPS',
+                'nama_pelapor' => $data['nama_pelapor'] ?? '',
+                'gedung_pelapor' => $data['gedung_pelapor'] ?? '',
+                'bukti_foto' => $data['bukti_foto'] ?? null,
                 'kategori_sampah' => $category['dapat_dijual'] ? 'bisa_dijual' : 'tidak_bisa_dijual',
-                'status' => $status
+                'catatan' => $data['catatan'] ?? '',
+                'status' => $status,
+                'user_id' => $user['id'],
+                'created_at' => $tanggalWaktu
             ];
             
             // Add nilai_rupiah if can be sold
@@ -97,7 +111,7 @@ class WasteService
             
             if ($result) {
                 log_message('info', 'TPS Save Waste - Success, ID: ' . $result);
-                $message = $status === 'dikirim' ? 'Data sampah berhasil disimpan dan dikirim' : 'Data sampah berhasil disimpan sebagai draft';
+                $message = $status === 'dikirim_ke_tps' ? 'Data sampah berhasil disimpan dan dikirim ke TPS' : 'Data sampah berhasil disimpan sebagai draft';
                 return ['success' => true, 'message' => $message];
             }
 
@@ -345,6 +359,58 @@ class WasteService
             log_message('error', 'Export PDF TPS Waste Error: ' . $e->getMessage());
             log_message('error', 'Stack trace: ' . $e->getTraceAsString());
             return ['success' => false, 'message' => 'Terjadi kesalahan saat export PDF: ' . $e->getMessage()];
+        }
+    }
+
+    public function exportExcel(): void
+    {
+        try {
+            $user = session()->get('user');
+            $tpsId = $user['unit_id'];
+            $tpsInfo = $this->getTpsInfo($tpsId);
+
+            $wasteList = $this->getWasteList($tpsId);
+            
+            if (empty($wasteList)) {
+                echo '<script>alert("Tidak ada data untuk diekspor"); window.history.back();</script>';
+                exit;
+            }
+
+            // Prepare data for Excel
+            $headers = ['No', 'Tanggal', 'Jenis Sampah', 'Berat (kg)', 'Satuan', 'Nilai (Rp)', 'Status'];
+            $data = [];
+            $no = 1;
+            
+            foreach ($wasteList as $waste) {
+                $status = match($waste['status'] ?? 'draft') {
+                    'disetujui' => 'Disetujui',
+                    'dikirim' => 'Dikirim',
+                    'review' => 'Review',
+                    'perlu_revisi' => 'Perlu Revisi',
+                    'draft' => 'Draft',
+                    default => 'Draft'
+                };
+                
+                $data[] = [
+                    $no++,
+                    date('d/m/Y H:i', strtotime($waste['created_at'])),
+                    $waste['jenis_sampah'] ?? '-',
+                    number_format($waste['berat_kg'] ?? 0, 2, '.', ''),
+                    $waste['satuan'] ?? 'kg',
+                    number_format($waste['nilai_rupiah'] ?? 0, 0, '', ''),
+                    $status
+                ];
+            }
+
+            $filename = 'Data_Sampah_TPS_' . ($tpsInfo['nama_unit'] ?? 'TPS') . '_' . date('Y-m-d_His');
+            $title = 'LAPORAN DATA SAMPAH TPS - ' . ($tpsInfo['nama_unit'] ?? 'TPS');
+            
+            helper('excel');
+            exportToExcel($data, $headers, $filename, $title);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Export Excel TPS Waste Error: ' . $e->getMessage());
+            throw $e;
         }
     }
 

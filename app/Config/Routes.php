@@ -26,6 +26,7 @@ $routes->group('admin-pusat', ['filter' => 'role:admin_pusat,super_admin'], func
     require APPPATH . 'Config/Routes/Admin/harga.php';
     require APPPATH . 'Config/Routes/Admin/feature_toggle.php';
     require APPPATH . 'Config/Routes/Admin/user_management.php';
+    require APPPATH . 'Config/Routes/Admin/unit_management.php';
     require APPPATH . 'Config/Routes/Admin/waste.php';
     require APPPATH . 'Config/Routes/Admin/review.php';
     require APPPATH . 'Config/Routes/Admin/laporan.php';
@@ -70,8 +71,15 @@ $routes->group('pengelola-tps', ['filter' => 'role:pengelola_tps'], function ($r
     $routes->get('dashboard', 'TPS\\Dashboard::index');
     $routes->get('/', 'TPS\\Dashboard::index');
     
+    // Laporan Masuk dari User
+    $routes->get('laporan-masuk', 'TPS\\LaporanMasuk::index');
+    $routes->get('laporan-masuk/detail/(:num)', 'TPS\\LaporanMasuk::detail/$1');
+    $routes->post('laporan-masuk/approve/(:num)', 'TPS\\LaporanMasuk::approve/$1');
+    $routes->post('laporan-masuk/reject/(:num)', 'TPS\\LaporanMasuk::reject/$1');
+    
     // Waste Management
     $routes->get('waste', 'TPS\\Waste::index');
+    $routes->get('waste/form', 'TPS\\Waste::form'); // Form input data sampah
     $routes->get('waste/get/(:num)', 'TPS\\Waste::get/$1');
     $routes->post('waste/save', 'TPS\\Waste::save');
     $routes->post('waste/edit/(:num)', 'TPS\\Waste::edit/$1');
@@ -102,20 +110,33 @@ $routes->set404Override(function() {
     $user = session()->get('user');
     
     if (!$user || !session()->get('isLoggedIn')) {
-        return redirect()->to('/auth/login')->with('error', 'Halaman tidak ditemukan. Silakan login terlebih dahulu.');
+        // Return view instead of redirect for 404
+        echo view('errors/html/error_404', [
+            'message' => 'Halaman tidak ditemukan. Silakan login terlebih dahulu.',
+            'login_url' => base_url('/auth/login')
+        ]);
+        return;
     }
     
     // Redirect to appropriate dashboard based on role
     $role = $user['role'] ?? null;
+    $redirectUrl = '/auth/login';
+    $message = 'Halaman tidak ditemukan.';
+    
     switch ($role) {
         case 'admin_pusat':
         case 'super_admin':
-            return redirect()->to('/admin-pusat/dashboard')->with('error', 'Halaman tidak ditemukan. Anda dialihkan ke dashboard.');
+            $redirectUrl = '/admin-pusat/dashboard';
+            break;
         case 'user':
-            return redirect()->to('/user/dashboard')->with('error', 'Halaman tidak ditemukan. Anda dialihkan ke dashboard.');
+            $redirectUrl = '/user/dashboard';
+            break;
         case 'pengelola_tps':
-            return redirect()->to('/pengelola-tps/dashboard')->with('error', 'Halaman tidak ditemukan. Anda dialihkan ke dashboard.');
-        default:
-            return redirect()->to('/auth/login')->with('error', 'Halaman tidak ditemukan dan role tidak valid.');
+            $redirectUrl = '/pengelola-tps/dashboard';
+            break;
     }
+    
+    // Use header redirect instead of CodeIgniter redirect
+    header('Location: ' . base_url($redirectUrl));
+    exit;
 });

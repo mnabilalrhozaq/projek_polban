@@ -51,6 +51,9 @@ class DashboardService
             // 4. Get waste by type with pagination
             $wasteByTypeData = $this->getWasteByTypePaginated($page, $perPage);
 
+            // 5. Get monthly summary
+            $monthlySummary = $this->getMonthlySummary();
+
             return [
                 'stats' => $stats,
                 'recentSubmissions' => $recentSubmissions,
@@ -58,7 +61,8 @@ class DashboardService
                 'wasteByType' => $wasteByTypeData['data'],
                 'pager' => $wasteByTypeData['pager'],
                 'totalPages' => $wasteByTypeData['totalPages'],
-                'totalItems' => $wasteByTypeData['totalItems']
+                'totalItems' => $wasteByTypeData['totalItems'],
+                'monthlySummary' => $monthlySummary
             ];
 
         } catch (\Exception $e) {
@@ -80,7 +84,8 @@ class DashboardService
                 'wasteByType' => [],
                 'pager' => null,
                 'totalPages' => 0,
-                'totalItems' => 0
+                'totalItems' => 0,
+                'monthlySummary' => []
             ];
         }
     }
@@ -412,4 +417,68 @@ class DashboardService
             return [];
         }
     }
+
+    /**
+     * Get monthly summary for current year (12 months grid)
+     * Returns data count and total weight per month
+     * 
+     * @return array
+     */
+    public function getMonthlySummary(): array
+    {
+        try {
+            $db = \Config\Database::connect();
+            $currentYear = date('Y');
+            
+            // Get monthly data from laporan_waste (approved data)
+            $query = $db->table('laporan_waste')
+                ->select('MONTH(tanggal_input) as month, COUNT(*) as data_count, SUM(berat_kg) as total_weight')
+                ->where('YEAR(tanggal_input)', $currentYear)
+                ->where('status', 'approved')
+                ->groupBy('MONTH(tanggal_input)')
+                ->get();
+            
+            $results = $query->getResultArray();
+            
+            // Initialize 12 months with zero values
+            $monthlySummary = [];
+            for ($i = 1; $i <= 12; $i++) {
+                $monthlySummary[$i] = [
+                    'month' => $i,
+                    'month_name' => date('M', mktime(0, 0, 0, $i, 1)),
+                    'data_count' => 0,
+                    'total_weight' => 0
+                ];
+            }
+            
+            // Fill in actual data
+            foreach ($results as $row) {
+                $month = (int)$row['month'];
+                $monthlySummary[$month] = [
+                    'month' => $month,
+                    'month_name' => date('M', mktime(0, 0, 0, $month, 1)),
+                    'data_count' => (int)$row['data_count'],
+                    'total_weight' => (float)$row['total_weight']
+                ];
+            }
+            
+            return array_values($monthlySummary);
+
+        } catch (\Exception $e) {
+            log_message('error', 'DashboardService getMonthlySummary error: ' . $e->getMessage());
+            
+            // Return empty 12 months
+            $monthlySummary = [];
+            for ($i = 1; $i <= 12; $i++) {
+                $monthlySummary[] = [
+                    'month' => $i,
+                    'month_name' => date('M', mktime(0, 0, 0, $i, 1)),
+                    'data_count' => 0,
+                    'total_weight' => 0
+                ];
+            }
+            return $monthlySummary;
+        }
+    }
 }
+

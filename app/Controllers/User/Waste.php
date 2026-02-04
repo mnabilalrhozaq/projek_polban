@@ -55,7 +55,8 @@ class Waste extends BaseController
                 'categories' => $categories, // Untuk cards (dengan pagination)
                 'allCategories' => $allCategories, // Untuk dropdown form (semua data)
                 'pagerHarga' => $pagerHarga,
-                'stats' => $data['stats']
+                'stats' => $data['stats'],
+                'recent_activities' => $data['recent_activities'] ?? []
             ];
 
             return view('user/waste', $viewData);
@@ -158,13 +159,22 @@ class Waste extends BaseController
     public function save()
     {
         try {
+            log_message('info', '=== User Waste Save START ===');
+            
             if (!$this->validateSession()) {
+                log_message('warning', 'User Waste Save - Session invalid');
                 return $this->response
                     ->setContentType('application/json')
                     ->setJSON(['success' => false, 'message' => 'Session invalid']);
             }
 
-            $result = $this->wasteService->saveWaste($this->request->getPost());
+            $postData = $this->request->getPost();
+            log_message('info', 'User Waste Save - POST data: ' . json_encode($postData));
+            log_message('info', 'User Waste Save - User: ' . json_encode(session()->get('user')));
+            
+            $result = $this->wasteService->saveWaste($postData);
+            
+            log_message('info', 'User Waste Save - Result: ' . json_encode($result));
             
             return $this->response
                 ->setContentType('application/json')
@@ -172,12 +182,13 @@ class Waste extends BaseController
 
         } catch (\Exception $e) {
             log_message('error', 'User Waste Save Error: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
             
             return $this->response
                 ->setContentType('application/json')
                 ->setJSON([
                     'success' => false,
-                    'message' => 'Terjadi kesalahan saat menyimpan data'
+                    'message' => 'Terjadi kesalahan saat menyimpan data: ' . $e->getMessage()
                 ]);
         }
     }
@@ -235,7 +246,7 @@ class Waste extends BaseController
                     ->setJSON(['success' => false, 'message' => 'Bukan milik unit Anda']);
             }
             
-            if (!in_array($waste['status'], ['draft', 'perlu_revisi'])) {
+            if (!in_array($waste['status'], ['draft', 'perlu_revisi', 'ditolak_tps'])) {
                 return $this->response
                     ->setContentType('application/json')
                     ->setJSON(['success' => false, 'message' => 'Data sudah disubmit tidak dapat diedit']);
@@ -253,7 +264,15 @@ class Waste extends BaseController
             }
             
             // Prepare update data
-            $status = (isset($data['status_action']) && $data['status_action'] === 'kirim') ? 'dikirim' : 'draft';
+            // If editing rejected data and sending again, send back to TPS
+            $status = 'draft';
+            if (isset($data['status_action']) && $data['status_action'] === 'kirim') {
+                if ($waste['status'] === 'ditolak_tps') {
+                    $status = 'dikirim_ke_tps';
+                } else {
+                    $status = 'dikirim';
+                }
+            }
             
             // berat_kg sudah dalam kg dari frontend (sudah dikonversi)
             $beratKg = $data['berat_kg'];
@@ -276,7 +295,11 @@ class Waste extends BaseController
             log_message('info', 'Update result: ' . ($result ? 'success' : 'failed'));
             
             if ($result) {
-                $message = $status === 'dikirim' ? 'Data berhasil diupdate dan dikirim' : 'Data berhasil diupdate sebagai draft';
+                $message = $status === 'dikirim_ke_tps' 
+                    ? 'Data berhasil diupdate dan dikirim ulang ke TPS' 
+                    : ($status === 'dikirim' 
+                        ? 'Data berhasil diupdate dan dikirim' 
+                        : 'Data berhasil diupdate sebagai draft');
                 log_message('info', '=== User Waste Edit SUCCESS ===');
                 return $this->response
                     ->setContentType('application/json')
@@ -377,6 +400,22 @@ class Waste extends BaseController
         } catch (\Exception $e) {
             log_message('error', 'User Waste Export PDF Error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Terjadi kesalahan saat export PDF');
+        }
+    }
+
+    public function exportExcel()
+    {
+        try {
+            if (!$this->validateSession()) {
+                return redirect()->to('/auth/login');
+            }
+
+            helper('excel');
+            $this->wasteService->exportExcel();
+
+        } catch (\Exception $e) {
+            log_message('error', 'User Waste Export Excel Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat export Excel');
         }
     }
 

@@ -205,10 +205,6 @@ if (!function_exists('formatCurrency')) {
                                 <i class="fas fa-money-bill-wave"></i>
                                 <span>Kelola Harga Sampah</span>
                             </a>
-                            <a href="<?= base_url('/admin-pusat/feature-toggle') ?>" class="quick-action-btn">
-                                <i class="fas fa-toggle-on"></i>
-                                <span>Feature Toggle</span>
-                            </a>
                             <a href="<?= base_url('/admin-pusat/waste') ?>" class="quick-action-btn">
                                 <i class="fas fa-trash-alt"></i>
                                 <span>Waste Management</span>
@@ -225,95 +221,131 @@ if (!function_exists('formatCurrency')) {
                     </div>
                 </div>
 
-                <!-- Recent Price Changes - Feature Toggle: dashboard_recent_activity -->
-                <?php if (isFeatureEnabled('dashboard_recent_activity', 'admin_pusat')): ?>
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-history"></i> Perubahan Harga Terbaru (Hari Ini)</h3>
-                        <div class="card-actions">
-                            <a href="<?= base_url('/admin-pusat/manajemen-harga/logs') ?>" class="btn btn-outline-info btn-sm">
-                                <i class="fas fa-history"></i> Lihat Semua
-                            </a>
+                <!-- Two Column Layout for Price Changes and Monthly Summary -->
+                <div class="sidebar-two-column">
+                    <!-- Monthly Summary - Ringkasan Bulanan -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-calendar-alt"></i> Ringkasan Bulanan <?= date('Y') ?></h3>
+                        </div>
+                        <div class="card-body">
+                            <?php if (!empty($monthlySummary)): ?>
+                                <div class="monthly-summary-grid">
+                                    <?php foreach ($monthlySummary as $month): ?>
+                                    <div class="month-card">
+                                        <div class="month-name"><?= $month['month_name'] ?></div>
+                                        <div class="month-stats">
+                                            <div class="month-stat">
+                                                <small>Data:</small>
+                                                <strong><?= $month['data_count'] ?></strong>
+                                            </div>
+                                            <div class="month-stat">
+                                                <small>Berat:</small>
+                                                <strong><?= number_format($month['total_weight'], 0) ?> kg</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="empty-state">
+                                    <i class="fas fa-calendar-times fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted mb-0">Belum ada data bulan ini</p>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <?php if (!empty($recentPriceChanges)): ?>
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Jenis Sampah</th>
-                                            <th>Harga Lama</th>
-                                            <th>Harga Baru</th>
-                                            <th>Perubahan</th>
-                                            <th>Admin</th>
-                                            <th>Waktu</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($recentPriceChanges as $change): ?>
-                                        <tr>
-                                            <td>
-                                                <strong><?= htmlspecialchars($change['jenis_sampah']) ?></strong>
-                                                <?php if (!empty($change['nama_jenis'])): ?>
-                                                    <br><small class="text-muted"><?= htmlspecialchars($change['nama_jenis']) ?></small>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <?php if ($change['harga_lama']): ?>
-                                                    <span class="text-muted text-decoration-line-through">
-                                                        <?= formatCurrency($change['harga_lama']) ?>
-                                                    </span>
-                                                <?php else: ?>
-                                                    <span class="text-muted">-</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <strong class="text-success">
-                                                    <?= formatCurrency($change['harga_baru']) ?>
-                                                </strong>
-                                            </td>
-                                            <td>
-                                                <?php 
-                                                if ($change['harga_lama']) {
-                                                    $selisih = $change['harga_baru'] - $change['harga_lama'];
-                                                    $persen = ($change['harga_lama'] > 0) ? ($selisih / $change['harga_lama']) * 100 : 0;
-                                                    $badgeClass = $selisih > 0 ? 'success' : 'danger';
-                                                    $icon = $selisih > 0 ? 'arrow-up' : 'arrow-down';
-                                                ?>
-                                                    <span class="badge bg-<?= $badgeClass ?>">
-                                                        <i class="fas fa-<?= $icon ?>"></i>
-                                                        <?= number_format(abs($persen), 1) ?>%
-                                                    </span>
-                                                <?php } else { ?>
-                                                    <span class="badge bg-info">
-                                                        <i class="fas fa-plus"></i> Baru
-                                                    </span>
-                                                <?php } ?>
-                                            </td>
-                                            <td>
-                                                <small>Admin</small>
-                                            </td>
-                                            <td>
-                                                <small><?= $change['waktu_perubahan'] ?? date('d/m/Y H:i', strtotime($change['created_at'])) ?></small>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+
+                    <!-- Recent Price Changes - Feature Toggle: dashboard_recent_activity -->
+                    <?php if (isFeatureEnabled('dashboard_recent_activity', 'admin_pusat')): ?>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-history"></i> Perubahan Harga Terbaru (Hari Ini)</h3>
+                            <div class="card-actions">
+                                <a href="<?= base_url('/admin-pusat/manajemen-harga/logs') ?>" class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-history"></i> Lihat Semua
+                                </a>
                             </div>
-                        <?php else: ?>
-                            <div class="empty-state">
-                                <i class="fas fa-history fa-2x text-muted mb-2"></i>
-                                <p class="text-muted mb-0">Belum ada perubahan harga hari ini</p>
-                            </div>
-                        <?php endif; ?>
+                        </div>
+                        <div class="card-body">
+                            <?php if (!empty($recentPriceChanges)): ?>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Jenis Sampah</th>
+                                                <th>Harga Lama</th>
+                                                <th>Harga Baru</th>
+                                                <th>Perubahan</th>
+                                                <th>Admin</th>
+                                                <th>Waktu</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($recentPriceChanges as $change): ?>
+                                            <tr>
+                                                <td>
+                                                    <strong><?= htmlspecialchars($change['jenis_sampah']) ?></strong>
+                                                    <?php if (!empty($change['nama_jenis'])): ?>
+                                                        <br><small class="text-muted"><?= htmlspecialchars($change['nama_jenis']) ?></small>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <?php if ($change['harga_lama']): ?>
+                                                        <span class="text-muted text-decoration-line-through">
+                                                            <?= formatCurrency($change['harga_lama']) ?>
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="text-muted">-</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <strong class="text-success">
+                                                        <?= formatCurrency($change['harga_baru']) ?>
+                                                    </strong>
+                                                </td>
+                                                <td>
+                                                    <?php 
+                                                    if ($change['harga_lama']) {
+                                                        $selisih = $change['harga_baru'] - $change['harga_lama'];
+                                                        $persen = ($change['harga_lama'] > 0) ? ($selisih / $change['harga_lama']) * 100 : 0;
+                                                        $badgeClass = $selisih > 0 ? 'success' : 'danger';
+                                                        $icon = $selisih > 0 ? 'arrow-up' : 'arrow-down';
+                                                    ?>
+                                                        <span class="badge bg-<?= $badgeClass ?>">
+                                                            <i class="fas fa-<?= $icon ?>"></i>
+                                                            <?= number_format(abs($persen), 1) ?>%
+                                                        </span>
+                                                    <?php } else { ?>
+                                                        <span class="badge bg-info">
+                                                            <i class="fas fa-plus"></i> Baru
+                                                        </span>
+                                                    <?php } ?>
+                                                </td>
+                                                <td>
+                                                    <small>Admin</small>
+                                                </td>
+                                                <td>
+                                                    <small><?= $change['waktu_perubahan'] ?? date('d/m/Y H:i', strtotime($change['created_at'])) ?></small>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php else: ?>
+                                <div class="empty-state">
+                                    <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted mb-0">Belum ada perubahan harga hari ini</p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
+                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
             </div>
         </div>
-    </div>
+                </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -451,7 +483,7 @@ body {
 /* ===== CONTENT GRID ===== */
 .content-grid {
     display: grid;
-    grid-template-columns: 1fr 350px;
+    grid-template-columns: 1fr 800px;
     gap: 30px;
     margin-bottom: 30px;
 }
@@ -463,6 +495,13 @@ body {
 .content-sidebar {
     display: flex;
     flex-direction: column;
+    gap: 20px;
+}
+
+/* Sidebar Two Column Layout */
+.sidebar-two-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
 
@@ -692,6 +731,57 @@ body {
     font-size: 16px;
 }
 
+/* ===== MONTHLY SUMMARY GRID ===== */
+.monthly-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.month-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 12px;
+    border-left: 3px solid #007bff;
+    transition: all 0.3s ease;
+}
+
+.month-card:hover {
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.month-name {
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.month-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.month-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+
+.month-stat small {
+    color: #6c757d;
+}
+
+.month-stat strong {
+    color: #2c3e50;
+    font-size: 13px;
+}
+
 /* ===== BUTTONS ===== */
 .btn {
     border-radius: 8px;
@@ -704,9 +794,15 @@ body {
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 1400px) {
+    .content-grid {
+        grid-template-columns: 1fr 700px;
+    }
+}
+
 @media (max-width: 1200px) {
     .content-grid {
-        grid-template-columns: 1fr 300px;
+        grid-template-columns: 1fr 600px;
     }
 }
 
@@ -719,13 +815,19 @@ body {
     .content-sidebar {
         order: -1;
     }
+
+    .sidebar-two-column {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
 }
 
 @media (max-width: 768px) {
     .main-content {
         margin-left: 0;
-        padding: 20px;
+        padding: 15px 10px;
         max-width: 100vw;
+        overflow-x: hidden;
     }
     
     .stats-grid {
@@ -734,23 +836,220 @@ body {
     }
     
     .stat-card {
-        padding: 20px;
+        padding: 15px;
+        gap: 15px;
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+
+    .stat-content h3 {
+        font-size: 22px;
+    }
+
+    .stat-content p {
+        font-size: 12px;
     }
     
+    .dashboard-header {
+        padding: 15px 0;
+        margin-bottom: 20px;
+    }
+
     .dashboard-header h1 {
-        font-size: 24px;
+        font-size: 22px;
+    }
+
+    .dashboard-header p {
+        font-size: 14px;
     }
     
     .card-header {
-        padding: 15px 20px;
+        padding: 12px 15px;
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 10px;
+    }
+
+    .card-header h3 {
+        font-size: 16px;
+    }
+
+    .card-actions {
+        width: 100%;
+    }
+
+    .card-actions .btn {
+        width: 100%;
+        font-size: 13px;
+        padding: 8px 12px;
     }
     
     .card-body {
-        padding: 20px;
+        padding: 15px 10px;
     }
     
     .waste-grid {
         grid-template-columns: 1fr;
+    }
+
+    /* Fix content overflow */
+    .card {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* Table responsive fixes */
+    .table-responsive {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -10px;
+        padding: 0 10px;
+    }
+
+    .table {
+        font-size: 11px;
+        min-width: 600px;
+    }
+
+    .table th,
+    .table td {
+        padding: 8px 6px;
+        font-size: 11px;
+    }
+
+    .table th {
+        font-size: 10px;
+        text-transform: uppercase;
+    }
+
+    .table .badge {
+        font-size: 9px;
+        padding: 3px 6px;
+    }
+
+    /* Quick actions */
+    .quick-actions-vertical {
+        gap: 8px;
+    }
+
+    .quick-action-btn {
+        padding: 12px;
+        font-size: 13px;
+    }
+
+    .quick-action-btn i {
+        font-size: 14px;
+    }
+
+    .quick-action-btn span {
+        font-size: 13px;
+    }
+
+    /* Empty state */
+    .empty-state {
+        padding: 30px 15px;
+    }
+
+    .empty-state i {
+        font-size: 36px;
+    }
+
+    .empty-state p {
+        font-size: 14px;
+    }
+
+    .row {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .row > [class*="col-"] {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    /* Content grid */
+    .content-grid {
+        gap: 15px;
+    }
+
+    .content-main,
+    .content-sidebar {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    /* Monthly summary responsive */
+    .monthly-summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .month-card {
+        padding: 10px;
+    }
+
+    .month-name {
+        font-size: 12px;
+    }
+
+    .month-stat {
+        font-size: 10px;
+    }
+
+    .month-stat strong {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: 10px 5px;
+    }
+
+    .dashboard-header h1 {
+        font-size: 20px;
+    }
+
+    .stat-card {
+        padding: 12px;
+    }
+
+    .stat-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+    }
+
+    .stat-content h3 {
+        font-size: 20px;
+    }
+
+    .card-header {
+        padding: 10px 12px;
+    }
+
+    .card-body {
+        padding: 12px 8px;
+    }
+
+    .table {
+        font-size: 10px;
+        min-width: 550px;
+    }
+
+    .table th,
+    .table td {
+        padding: 6px 4px;
+    }
+
+    .quick-action-btn {
+        padding: 10px;
     }
 }
 </style>

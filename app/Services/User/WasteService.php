@@ -36,7 +36,8 @@ class WasteService
                 'unit' => $unit,
                 'waste_list' => $this->getWasteList($unitId),
                 'categories' => $this->getCategories(),
-                'stats' => $this->getWasteStats($unitId)
+                'stats' => $this->getWasteStats($unitId),
+                'recent_activities' => $this->getRecentActivities($user['id'])
             ];
         } catch (\Exception $e) {
             log_message('error', 'User Waste Service Error: ' . $e->getMessage());
@@ -74,7 +75,7 @@ class WasteService
             // Determine status based on action
             $status = 'draft';
             if (isset($data['status_action']) && $data['status_action'] === 'kirim') {
-                $status = 'dikirim';
+                $status = 'dikirim_ke_tps'; // Changed from 'dikirim' to 'dikirim_ke_tps'
             }
             
             // Get satuan from input, default to 'kg' if not provided
@@ -84,12 +85,14 @@ class WasteService
                 'unit_id' => $user['unit_id'],
                 'berat_kg' => $data['berat_kg'],
                 'tanggal' => date('Y-m-d'),
-                'jenis_sampah' => $category['jenis_sampah'],
+                'jenis_sampah' => $category['jenis_sampah'],  // Kategori umum (Plastik, Kertas, dll)
+                'nama_sampah' => $category['nama_jenis'],      // Nama detail (Keyboard Bekas, dll)
                 'satuan' => $satuan,
                 'jumlah' => $data['berat_kg'],
                 'gedung' => 'User Unit',
                 'kategori_sampah' => $category['dapat_dijual'] ? 'bisa_dijual' : 'tidak_bisa_dijual',
-                'status' => $status
+                'status' => $status,
+                'user_id' => $user['id']  // Changed from created_by to user_id
             ];
             
             // Add nilai_rupiah if can be sold
@@ -103,14 +106,23 @@ class WasteService
             
             if ($result) {
                 log_message('info', 'User Save Waste - Success, ID: ' . $result);
-                $message = $status === 'dikirim' ? 'Data sampah berhasil disimpan dan dikirim' : 'Data sampah berhasil disimpan sebagai draft';
+                $message = $status === 'dikirim_ke_tps' ? 'Data sampah berhasil disimpan dan dikirim ke TPS' : 'Data sampah berhasil disimpan sebagai draft';
                 return ['success' => true, 'message' => $message];
             }
 
             // Get database error if insert failed
             $db = \Config\Database::connect();
             $error = $db->error();
+            $lastQuery = $db->getLastQuery();
             log_message('error', 'User Save Waste - Insert failed. DB Error: ' . json_encode($error));
+            log_message('error', 'User Save Waste - Last Query: ' . $lastQuery);
+            log_message('error', 'User Save Waste - Model errors: ' . json_encode($this->wasteModel->errors()));
+            
+            // Check if there are validation errors
+            $validationErrors = $this->wasteModel->errors();
+            if (!empty($validationErrors)) {
+                return ['success' => false, 'message' => 'Validasi gagal: ' . implode(', ', $validationErrors)];
+            }
             
             return ['success' => false, 'message' => 'Gagal menyimpan data sampah: ' . ($error['message'] ?? 'Unknown error')];
 
@@ -153,7 +165,7 @@ class WasteService
             }
 
             // Check if waste can be edited
-            if (!in_array($waste['status'], ['draft', 'perlu_revisi'])) {
+            if (!in_array($waste['status'], ['draft', 'perlu_revisi', 'ditolak_tps'])) {
                 return ['success' => false, 'message' => 'Data yang sudah disubmit tidak dapat diedit'];
             }
 
@@ -168,14 +180,20 @@ class WasteService
             // Determine status based on action
             $status = 'draft';
             if (isset($data['status_action']) && $data['status_action'] === 'kirim') {
-                $status = 'dikirim';
+                // If editing rejected data and sending again, send back to TPS
+                if ($waste['status'] === 'ditolak_tps') {
+                    $status = 'dikirim_ke_tps';
+                } else {
+                    $status = 'dikirim';
+                }
             }
             
             $wasteData = [
                 'berat_kg' => $data['berat_kg'],
                 'jumlah' => $data['berat_kg'],
                 'satuan' => $data['satuan'] ?? $waste['satuan'] ?? 'kg',
-                'jenis_sampah' => $category['jenis_sampah'],
+                'jenis_sampah' => $category['jenis_sampah'],  // Kategori umum
+                'nama_sampah' => $category['nama_jenis'],      // Nama detail
                 'kategori_sampah' => $category['dapat_dijual'] ? 'bisa_dijual' : 'tidak_bisa_dijual',
                 'status' => $status
             ];
@@ -193,7 +211,11 @@ class WasteService
             
             if ($result) {
                 log_message('info', 'User Update Waste - Success');
-                $message = $status === 'dikirim' ? 'Data sampah berhasil diupdate dan dikirim' : 'Data sampah berhasil diupdate sebagai draft';
+                $message = $status === 'dikirim_ke_tps' 
+                    ? 'Data sampah berhasil diupdate dan dikirim ulang ke TPS' 
+                    : ($status === 'dikirim' 
+                        ? 'Data sampah berhasil diupdate dan dikirim' 
+                        : 'Data sampah berhasil diupdate sebagai draft');
                 return ['success' => true, 'message' => $message];
             }
 
@@ -219,7 +241,7 @@ class WasteService
             }
 
             // Check if waste can be deleted
-            if (!in_array($waste['status'], ['draft', 'perlu_revisi'])) {
+            if (!in_array($waste['status'], ['draft', 'perlu_revisi', 'ditolak_tps'])) {
                 return ['success' => false, 'message' => 'Data yang sudah disubmit tidak dapat dihapus'];
             }
 
@@ -360,6 +382,58 @@ class WasteService
         }
     }
 
+    public function exportExcel(): void
+    {
+        try {
+            $user = session()->get('user');
+            $unitId = $user['unit_id'];
+            $unit = $this->unitModel->find($unitId);
+
+            $wasteList = $this->getWasteList($unitId);
+            
+            if (empty($wasteList)) {
+                echo '<script>alert("Tidak ada data untuk diekspor"); window.history.back();</script>';
+                exit;
+            }
+
+            // Prepare data for Excel
+            $headers = ['No', 'Tanggal', 'Jenis Sampah', 'Berat (kg)', 'Satuan', 'Nilai (Rp)', 'Status'];
+            $data = [];
+            $no = 1;
+            
+            foreach ($wasteList as $waste) {
+                $status = match($waste['status'] ?? 'draft') {
+                    'disetujui' => 'Disetujui',
+                    'dikirim' => 'Dikirim',
+                    'review' => 'Review',
+                    'perlu_revisi' => 'Perlu Revisi',
+                    'draft' => 'Draft',
+                    default => 'Draft'
+                };
+                
+                $data[] = [
+                    $no++,
+                    date('d/m/Y H:i', strtotime($waste['created_at'])),
+                    $waste['jenis_sampah'] ?? '-',
+                    number_format($waste['berat_kg'] ?? 0, 2, '.', ''),
+                    $waste['satuan'] ?? 'kg',
+                    number_format($waste['nilai_rupiah'] ?? 0, 0, '', ''),
+                    $status
+                ];
+            }
+
+            $filename = 'Data_Sampah_' . ($unit['nama_unit'] ?? 'User') . '_' . date('Y-m-d_His');
+            $title = 'LAPORAN DATA SAMPAH - ' . ($unit['nama_unit'] ?? 'User');
+            
+            helper('excel');
+            exportToExcel($data, $headers, $filename, $title);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Export Excel User Waste Error: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
     private function getWasteList(int $unitId): array
     {
         try {
@@ -464,5 +538,79 @@ class WasteService
             'weight_today' => 0,
             'weight_month' => 0
         ];
+    }
+
+    private function getRecentActivities(int $userId): array
+    {
+        try {
+            $db = \Config\Database::connect();
+            
+            // Get recent activities from waste_management table
+            $query = $db->query("
+                SELECT 
+                    wm.id,
+                    wm.jenis_sampah,
+                    wm.berat_kg,
+                    wm.status,
+                    wm.catatan_admin,
+                    wm.created_at,
+                    wm.updated_at,
+                    wm.action_timestamp,
+                    u.nama_lengkap as user_name
+                FROM waste_management wm
+                LEFT JOIN users u ON wm.user_id = u.id
+                WHERE wm.user_id = ?
+                ORDER BY 
+                    COALESCE(wm.action_timestamp, wm.updated_at, wm.created_at) DESC
+                LIMIT 10
+            ", [$userId]);
+            
+            $activities = $query->getResultArray();
+            
+            // Format activities with descriptions
+            $formattedActivities = [];
+            foreach ($activities as $activity) {
+                $timestamp = $activity['action_timestamp'] ?? $activity['updated_at'] ?? $activity['created_at'];
+                $description = $this->getActivityDescription($activity);
+                
+                $formattedActivities[] = [
+                    'id' => $activity['id'],
+                    'description' => $description,
+                    'status' => $activity['status'],
+                    'timestamp' => $timestamp,
+                    'jenis_sampah' => $activity['jenis_sampah'],
+                    'berat_kg' => $activity['berat_kg'],
+                    'catatan_admin' => $activity['catatan_admin']
+                ];
+            }
+            
+            return $formattedActivities;
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting recent activities: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    private function getActivityDescription(array $activity): string
+    {
+        $jenis = htmlspecialchars($activity['jenis_sampah']);
+        $berat = number_format($activity['berat_kg'], 2);
+        
+        switch ($activity['status']) {
+            case 'draft':
+                return "Data sampah <strong>{$jenis}</strong> ({$berat} kg) disimpan sebagai draft";
+            case 'dikirim':
+                return "Data sampah <strong>{$jenis}</strong> ({$berat} kg) dikirim untuk review";
+            case 'disetujui':
+                return "Data sampah <strong>{$jenis}</strong> ({$berat} kg) disetujui oleh admin";
+            case 'ditolak':
+                $reason = !empty($activity['catatan_admin']) ? ': ' . htmlspecialchars($activity['catatan_admin']) : '';
+                return "Data sampah <strong>{$jenis}</strong> ({$berat} kg) ditolak{$reason}";
+            case 'perlu_revisi':
+                return "Data sampah <strong>{$jenis}</strong> ({$berat} kg) perlu direvisi";
+            default:
+                return "Data sampah <strong>{$jenis}</strong> ({$berat} kg) - status: {$activity['status']}";
+        }
     }
 }

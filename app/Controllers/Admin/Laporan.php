@@ -4,14 +4,17 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Services\Admin\LaporanService;
+use App\Services\ReportService;
 
 class Laporan extends BaseController
 {
     protected $laporanService;
+    protected $reportService;
 
     public function __construct()
     {
         $this->laporanService = new LaporanService();
+        $this->reportService = new ReportService();
     }
 
     public function index()
@@ -128,6 +131,244 @@ class Laporan extends BaseController
         } catch (\Exception $e) {
             log_message('error', 'Admin Laporan Export Error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Terjadi kesalahan saat export laporan');
+        }
+    }
+
+    /**
+     * Rekap Sampah by Nama Sampah
+     */
+    public function rekapSampah()
+    {
+        try {
+            if (!$this->validateSession()) {
+                return redirect()->to('/auth/login');
+            }
+
+            // Get nama sampah list for dropdown
+            $namaSampahList = $this->reportService->getAllNamaSampah();
+
+            // Default filters
+            $filters = [
+                'from' => $this->request->getGet('from') ?? date('Y-m-01'),
+                'to' => $this->request->getGet('to') ?? date('Y-m-d'),
+                'nama_sampah' => $this->request->getGet('nama_sampah') ?? '',
+                'search' => $this->request->getGet('search') ?? ''
+            ];
+
+            $viewData = [
+                'title' => 'Rekap Sampah',
+                'namaSampahList' => $namaSampahList,
+                'filters' => $filters
+            ];
+
+            return view('admin_pusat/laporan/rekap_sampah', $viewData);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Admin Laporan rekapSampah Error: ' . $e->getMessage());
+            
+            return view('admin_pusat/laporan/rekap_sampah', [
+                'title' => 'Rekap Sampah',
+                'namaSampahList' => [],
+                'filters' => [
+                    'from' => date('Y-m-01'),
+                    'to' => date('Y-m-d'),
+                    'nama_sampah' => '',
+                    'search' => ''
+                ],
+                'error' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Rekap Sampah Data (AJAX endpoint)
+     */
+    public function rekapSampahData()
+    {
+        try {
+            if (!$this->validateSession()) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Session tidak valid'
+                ])->setStatusCode(401);
+            }
+
+            // Get filters from query params
+            $filters = [
+                'from' => $this->request->getGet('from'),
+                'to' => $this->request->getGet('to'),
+                'nama_sampah' => $this->request->getGet('nama_sampah'),
+                'search' => $this->request->getGet('search')
+            ];
+
+            // Get page
+            $page = (int)($this->request->getGet('page') ?? 1);
+            if ($page < 1) $page = 1;
+
+            // Get data from service (perPage fixed at 5)
+            $result = $this->reportService->getRekapSampah($filters, $page, 5);
+
+            return $this->response->setJSON([
+                'success' => true,
+                'rows' => $result['rows'],
+                'total' => $result['total'],
+                'page' => $result['page'],
+                'perPage' => $result['perPage'],
+                'totalPages' => $result['totalPages'],
+                'aggregates' => $result['aggregates']
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Admin Laporan rekapSampahData Error: ' . $e->getMessage());
+            
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat memuat data',
+                'error' => $e->getMessage()
+            ])->setStatusCode(500);
+        }
+    }
+
+    /**
+     * Rekap per Unit
+     */
+    public function rekapUnit()
+    {
+        try {
+            if (!$this->validateSession()) {
+                return redirect()->to('/auth/login');
+            }
+
+            // Get all units for dropdown
+            $unitModel = new \App\Models\UnitModel();
+            $allUnits = $unitModel->where('status_aktif', 1)->findAll();
+
+            // Default filters
+            $filters = [
+                'from' => $this->request->getGet('from') ?? date('Y-m-01'),
+                'to' => $this->request->getGet('to') ?? date('Y-m-d'),
+                'unit_id' => $this->request->getGet('unit_id') ?? '',
+                'search' => $this->request->getGet('search') ?? ''
+            ];
+
+            $viewData = [
+                'title' => 'Rekap per Unit',
+                'allUnits' => $allUnits,
+                'filters' => $filters
+            ];
+
+            return view('admin_pusat/laporan/rekap_unit', $viewData);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Admin Laporan rekapUnit Error: ' . $e->getMessage());
+            
+            return view('admin_pusat/laporan/rekap_unit', [
+                'title' => 'Rekap per Unit',
+                'allUnits' => [],
+                'filters' => [
+                    'from' => date('Y-m-01'),
+                    'to' => date('Y-m-d'),
+                    'unit_id' => '',
+                    'search' => ''
+                ],
+                'error' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Rekap Unit Data (AJAX endpoint)
+     */
+    public function rekapUnitData()
+    {
+        try {
+            if (!$this->validateSession()) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Session tidak valid'
+                ])->setStatusCode(401);
+            }
+
+            // Get filters from query params
+            $filters = [
+                'from' => $this->request->getGet('from'),
+                'to' => $this->request->getGet('to'),
+                'unit_id' => $this->request->getGet('unit_id'),
+                'search' => $this->request->getGet('search')
+            ];
+
+            // Get page
+            $page = (int)($this->request->getGet('page') ?? 1);
+            if ($page < 1) $page = 1;
+
+            // Get data from service (perPage fixed at 5)
+            $result = $this->reportService->getRekapUnit($filters, $page, 5);
+
+            return $this->response->setJSON([
+                'success' => true,
+                'rows' => $result['rows'],
+                'total' => $result['total'],
+                'page' => $result['page'],
+                'perPage' => $result['perPage'],
+                'totalPages' => $result['totalPages'],
+                'aggregates' => $result['aggregates']
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Admin Laporan rekapUnitData Error: ' . $e->getMessage());
+            
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat memuat data',
+                'error' => $e->getMessage()
+            ])->setStatusCode(500);
+        }
+    }
+
+    /**
+     * Confirm Report (POST)
+     */
+    public function confirmReport($id)
+    {
+        try {
+            if (!$this->validateSession()) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Session tidak valid'
+                ])->setStatusCode(401);
+            }
+
+            // Validate CSRF
+            if (!$this->validate(['csrf_test_name' => 'required'])) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'CSRF token tidak valid'
+                ])->setStatusCode(403);
+            }
+
+            // Get admin info from session
+            $session = session();
+            $user = $session->get('user');
+            $adminId = $user['id'];
+            $adminName = $user['nama_lengkap'] ?? $user['username'];
+
+            // Confirm report via service
+            $result = $this->reportService->confirmReport((int)$id, $adminId, $adminName);
+
+            if ($result['success']) {
+                return $this->response->setJSON($result);
+            } else {
+                return $this->response->setJSON($result)->setStatusCode(400);
+            }
+
+        } catch (\Exception $e) {
+            log_message('error', 'Admin Laporan confirmReport Error: ' . $e->getMessage());
+            
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat konfirmasi laporan',
+                'error' => $e->getMessage()
+            ])->setStatusCode(500);
         }
     }
 

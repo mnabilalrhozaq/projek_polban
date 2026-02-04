@@ -132,12 +132,91 @@ helper('feature');
         </div>
         <?php endif; ?>
 
+        <!-- Recent Activity Notifications -->
+        <?php if (!empty($recentActivities)): ?>
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bell"></i>
+                <h3>Aktivitas Terbaru</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 150px;">Tanggal</th>
+                                <th style="width: 150px;">Jenis Sampah</th>
+                                <th style="width: 100px;">Berat (kg)</th>
+                                <th style="width: 100px;">Satuan</th>
+                                <th style="width: 120px;">Nilai (Rp)</th>
+                                <th style="width: 100px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($recentActivities as $activity): ?>
+                            <tr>
+                                <td><?= date('d/m/Y', strtotime($activity['tanggal_review'] ?? $activity['time'])) ?></td>
+                                <td><?= esc($activity['jenis_sampah']) ?></td>
+                                <td><?= number_format($activity['berat_kg'], 2) ?></td>
+                                <td>kg</td>
+                                <td><?= number_format($activity['nilai_rupiah'] ?? 0, 0, ',', '.') ?></td>
+                                <td>
+                                    <?php
+                                    $statusClass = '';
+                                    $statusText = '';
+                                    switch($activity['status']) {
+                                        case 'draft':
+                                            $statusClass = 'badge bg-secondary';
+                                            $statusText = 'Draft';
+                                            break;
+                                        case 'dikirim':
+                                            $statusClass = 'badge bg-info';
+                                            $statusText = 'Dikirim';
+                                            break;
+                                        case 'review':
+                                            $statusClass = 'badge bg-warning';
+                                            $statusText = 'Review';
+                                            break;
+                                        case 'disetujui':
+                                            $statusClass = 'badge bg-success';
+                                            $statusText = 'Disetujui';
+                                            break;
+                                        case 'perlu_revisi':
+                                        case 'ditolak':
+                                            $statusClass = 'badge bg-danger';
+                                            $statusText = 'Ditolak';
+                                            break;
+                                        default:
+                                            $statusClass = 'badge bg-secondary';
+                                            $statusText = ucfirst($activity['status']);
+                                    }
+                                    ?>
+                                    <span class="<?= $statusClass ?>"><?= $statusText ?></span>
+                                </td>
+                                <td>
+                                    <?php if ($activity['has_detail']): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="showWasteDetail(<?= htmlspecialchars(json_encode($activity), ENT_QUOTES, 'UTF-8') ?>)">
+                                        <i class="fas fa-info-circle"></i> Detail
+                                    </button>
+                                    <?php else: ?>
+                                    <span class="text-muted" style="font-size: 11px;">-</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Waste Management Summary - Feature Toggle: dashboard_waste_summary -->
         <?php if (isFeatureEnabled('dashboard_waste_summary', 'user')): ?>
         <div class="card">
             <div class="card-header">
                 <i class="fas fa-trash-alt"></i>
-                <h3>Ringkasan Waste Management</h3>
+                <h3>List Data Sampah</h3>
                 
                 <!-- Quick Actions -->
                 <div class="quick-actions">
@@ -230,30 +309,50 @@ helper('feature');
         </div>
         <?php endif; ?>
 
-        <!-- Recent Activity - Feature Toggle: dashboard_recent_activity -->
-        <?php if (isFeatureEnabled('dashboard_recent_activity', 'user') && !empty($recentActivities)): ?>
-        <div class="card mt-4">
-            <div class="card-header">
-                <i class="fas fa-history"></i>
-                <h3>Aktivitas Terbaru</h3>
-            </div>
-            <div class="card-body">
-                <div class="activity-list">
-                    <?php foreach ($recentActivities as $activity): ?>
-                    <div class="activity-item">
-                        <div class="activity-icon">
-                            <i class="fas fa-<?= $activity['icon'] ?>"></i>
+        <!-- Waste Detail Modal -->
+        <div class="modal fade" id="activityDetailModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Detail Data Sampah</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="detail-item">
+                            <strong>Jenis Sampah:</strong>
+                            <span id="detail_jenis_sampah"></span>
                         </div>
-                        <div class="activity-content">
-                            <p><?= $activity['message'] ?></p>
-                            <small class="text-muted"><?= $activity['time'] ?></small>
+                        <div class="detail-item">
+                            <strong>Berat:</strong>
+                            <span id="detail_berat"></span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Nilai:</strong>
+                            <span id="detail_nilai"></span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Status:</strong>
+                            <span id="detail_status"></span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Direview oleh:</strong>
+                            <span id="detail_reviewer"></span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Tanggal Review:</strong>
+                            <span id="detail_tanggal_review"></span>
+                        </div>
+                        <div class="detail-item">
+                            <strong id="detail_catatan_label">Catatan:</strong>
+                            <div id="detail_catatan" class="alert mt-2"></div>
                         </div>
                     </div>
-                    <?php endforeach; ?>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    </div>
                 </div>
             </div>
         </div>
-        <?php endif; ?>
 
         <!-- Help Section -->
         <div class="help-section mt-4">
@@ -278,6 +377,44 @@ helper('feature');
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Show activity detail modal
+        function showActivityDetail(activity) {
+            document.getElementById('detail_jenis_sampah').textContent = activity.jenis_sampah;
+            document.getElementById('detail_berat').textContent = parseFloat(activity.berat_kg).toFixed(2) + ' kg';
+            document.getElementById('detail_nilai').textContent = 'Rp ' + parseInt(activity.nilai_rupiah).toLocaleString('id-ID');
+            
+            // Status badge
+            let statusBadge = '';
+            let catatanClass = '';
+            let catatanLabel = '';
+            
+            if (activity.status === 'disetujui') {
+                statusBadge = '<span class="badge bg-success">Disetujui</span>';
+                catatanClass = 'alert-success';
+                catatanLabel = 'Alasan Disetujui:';
+            } else if (activity.status === 'ditolak') {
+                statusBadge = '<span class="badge bg-danger">Ditolak</span>';
+                catatanClass = 'alert-danger';
+                catatanLabel = 'Alasan Ditolak:';
+            }
+            
+            document.getElementById('detail_status').innerHTML = statusBadge;
+            document.getElementById('detail_reviewer').textContent = activity.reviewer_name;
+            document.getElementById('detail_tanggal_review').textContent = new Date(activity.tanggal_review).toLocaleString('id-ID');
+            
+            // Catatan review
+            document.getElementById('detail_catatan_label').textContent = catatanLabel;
+            const catatanDiv = document.getElementById('detail_catatan');
+            catatanDiv.className = 'alert mt-2 ' + catatanClass;
+            catatanDiv.textContent = activity.catatan_review || 'Tidak ada catatan';
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('activityDetailModal'));
+            modal.show();
+        }
+    </script>
     
     <!-- Real-time Updates -->
     <?php if (isFeatureEnabled('real_time_updates', 'user')): ?>
@@ -522,6 +659,28 @@ body {
     color: #2c3e50;
 }
 
+.detail-item {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.detail-item strong {
+    display: block;
+    color: #2c3e50;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.detail-item span {
+    color: #6c757d;
+    font-size: 14px;
+}
+
 .alert {
     padding: 15px;
     margin-bottom: 20px;
@@ -544,11 +703,36 @@ body {
 @media (max-width: 768px) {
     .main-content {
         margin-left: 0;
-        padding: 20px;
+        padding: 15px 10px;
+        max-width: 100vw;
+        overflow-x: hidden;
     }
     
     .stats-grid {
         grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .stat-card {
+        padding: 20px 15px;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+
+    .stat-content h3 {
+        font-size: 28px;
+    }
+
+    .stat-content p {
+        font-size: 13px;
     }
     
     .waste-grid {
@@ -557,7 +741,63 @@ body {
     
     .quick-actions {
         flex-direction: column;
-        gap: 5px;
+        gap: 10px;
+    }
+
+    .quick-actions .btn {
+        width: 100%;
+    }
+
+    .card {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .card-header {
+        padding: 12px 15px;
+    }
+
+    .card-body {
+        padding: 15px 10px;
+    }
+
+    .table-responsive {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table {
+        font-size: 11px;
+        min-width: 600px;
+    }
+
+    .table th,
+    .table td {
+        padding: 8px 6px;
+        font-size: 11px;
+    }
+
+    .page-header h1 {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: 10px 5px;
+    }
+
+    .stat-card {
+        padding: 12px;
+    }
+
+    .card-header {
+        padding: 10px 12px;
+    }
+
+    .card-body {
+        padding: 12px 8px;
     }
 }
 </style>

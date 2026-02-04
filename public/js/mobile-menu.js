@@ -75,7 +75,13 @@
         // Close menu when clicking sidebar links
         const sidebarLinks = sidebar.querySelectorAll('a');
         sidebarLinks.forEach(function (link) {
-            link.addEventListener('click', function () {
+            link.addEventListener('click', function (e) {
+                // Don't close if it's a submenu toggle
+                if (link.classList.contains('menu-toggle')) {
+                    e.stopPropagation();
+                    return;
+                }
+
                 // Only close on mobile
                 if (window.innerWidth <= 1024) {
                     closeMenu();

@@ -30,12 +30,13 @@
     },
     "require": {
         "php": "^8.2",
-        "codeigniter4/framework": "^4.6.4",
         "ext-intl": "*",
         "ext-json": "*",
         "ext-mbstring": "*",
         "ext-mysqlnd": "*",
-        "dompdf/dompdf": "^3.0"
+        "codeigniter4/framework": "^4.6.4",
+        "dompdf/dompdf": "^3.0",
+        "phpoffice/phpspreadsheet": "^5.4"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

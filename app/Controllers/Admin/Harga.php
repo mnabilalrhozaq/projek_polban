@@ -331,6 +331,9 @@ class Harga extends BaseController
                 ]);
             }
             
+            // Set timezone to Asia/Jakarta
+            date_default_timezone_set('Asia/Jakarta');
+            
             // Prepare update data
             $data = [
                 'jenis_sampah' => $this->request->getPost('jenis_sampah'),
@@ -339,7 +342,8 @@ class Harga extends BaseController
                 'satuan' => $this->request->getPost('satuan'),
                 'dapat_dijual' => $this->request->getPost('dapat_dijual') ? 1 : 0,
                 'status_aktif' => $this->request->getPost('status_aktif') ? 1 : 0,
-                'deskripsi' => $this->request->getPost('deskripsi')
+                'deskripsi' => $this->request->getPost('deskripsi'),
+                'updated_at' => date('Y-m-d H:i:s') // Force correct timezone
             ];
             
             // Update
@@ -468,6 +472,62 @@ class Harga extends BaseController
                     'this_month' => 0
                 ],
                 'error' => 'Terjadi kesalahan saat memuat log'
+            ]);
+        }
+    }
+
+    /**
+     * Search all harga sampah (for AJAX search - no pagination)
+     */
+    public function search()
+    {
+        try {
+            if (!$this->validateSession()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+            }
+
+            $searchTerm = $this->request->getGet('q');
+            $statusFilter = $this->request->getGet('status');
+            
+            if (empty($searchTerm)) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Search term is required'
+                ]);
+            }
+
+            $hargaModel = new \App\Models\HargaSampahModel();
+            
+            // Apply status filter if provided
+            if ($statusFilter === 'aktif') {
+                $hargaModel->where('status_aktif', 1);
+            } elseif ($statusFilter === 'nonaktif') {
+                $hargaModel->where('status_aktif', 0);
+            }
+            
+            // Search in multiple columns
+            $results = $hargaModel
+                ->groupStart()
+                    ->like('jenis_sampah', $searchTerm)
+                    ->orLike('nama_jenis', $searchTerm)
+                    ->orLike('harga_per_satuan', $searchTerm)
+                ->groupEnd()
+                ->orderBy('status_aktif', 'DESC')
+                ->orderBy('jenis_sampah', 'ASC')
+                ->findAll(); // Get ALL results, no pagination
+
+            return $this->response->setJSON([
+                'success' => true,
+                'count' => count($results),
+                'results' => $results
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Admin Harga Search Error: ' . $e->getMessage());
+            
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat mencari data'
             ]);
         }
     }

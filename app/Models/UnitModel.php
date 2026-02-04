@@ -15,7 +15,6 @@ class UnitModel extends Model
     protected $allowedFields    = [
         'nama_unit',
         'kode_unit',
-        'tipe_unit',
         'deskripsi',
         'status_aktif'
     ];
@@ -39,7 +38,6 @@ class UnitModel extends Model
     protected $validationRules      = [
         'nama_unit' => 'required|max_length[255]',
         'kode_unit' => 'required|max_length[20]|is_unique[unit.kode_unit,id,{id}]',
-        'tipe_unit' => 'required|in_list[fakultas,jurusan,unit_kerja,lembaga]',
     ];
     protected $validationMessages   = [
         'nama_unit' => [

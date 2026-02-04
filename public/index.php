@@ -29,6 +29,9 @@ if (version_compare(PHP_VERSION, $minPhpVersion, '<')) {
  *---------------------------------------------------------------
  */
 
+// Set timezone to Asia/Jakarta
+date_default_timezone_set('Asia/Jakarta');
+
 // Path to the front controller (this file)
 define('FCPATH', __DIR__ . DIRECTORY_SEPARATOR);
 

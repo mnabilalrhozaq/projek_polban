@@ -19,9 +19,20 @@ class UserManagement extends BaseController
 
     public function index()
     {
-        if (!$this->validateAdminSession()) {
-            return redirect()->to('/auth/login');
+        log_message('info', '=== UserManagement::index() called ===');
+        
+        $session = session();
+        $user = $session->get('user');
+        
+        log_message('info', 'Session isLoggedIn: ' . ($session->get('isLoggedIn') ? 'true' : 'false'));
+        log_message('info', 'User data: ' . json_encode($user));
+        
+        if (!$session->get('isLoggedIn') || !isset($user['role']) || !in_array($user['role'], ['admin_pusat', 'super_admin'])) {
+            log_message('warning', 'Unauthorized access attempt to user management');
+            return redirect()->to('/auth/login')->with('error', 'Silakan login terlebih dahulu');
         }
+
+        log_message('info', 'User authorized, loading user management page');
 
         try {
             // Get filter parameters
@@ -127,7 +138,10 @@ class UserManagement extends BaseController
 
     public function getUser($id)
     {
-        if (!$this->validateAdminSession()) {
+        $session = session();
+        $user = $session->get('user');
+        
+        if (!$session->get('isLoggedIn') || !isset($user['role']) || !in_array($user['role'], ['admin_pusat', 'super_admin'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
         }
 
@@ -156,7 +170,10 @@ class UserManagement extends BaseController
 
     public function create()
     {
-        if (!$this->validateAdminSession()) {
+        $session = session();
+        $user = $session->get('user');
+        
+        if (!$session->get('isLoggedIn') || !isset($user['role']) || !in_array($user['role'], ['admin_pusat', 'super_admin'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
         }
 
@@ -238,7 +255,10 @@ class UserManagement extends BaseController
 
     public function update($id)
     {
-        if (!$this->validateAdminSession()) {
+        $session = session();
+        $user = $session->get('user');
+        
+        if (!$session->get('isLoggedIn') || !isset($user['role']) || !in_array($user['role'], ['admin_pusat', 'super_admin'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
         }
 
@@ -282,7 +302,10 @@ class UserManagement extends BaseController
 
     public function toggleStatus($id)
     {
-        if (!$this->validateAdminSession()) {
+        $session = session();
+        $user = $session->get('user');
+        
+        if (!$session->get('isLoggedIn') || !isset($user['role']) || !in_array($user['role'], ['admin_pusat', 'super_admin'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
         }
 
@@ -320,7 +343,10 @@ class UserManagement extends BaseController
 
     public function resetPassword($id)
     {
-        if (!$this->validateAdminSession()) {
+        $session = session();
+        $user = $session->get('user');
+        
+        if (!$session->get('isLoggedIn') || !isset($user['role']) || !in_array($user['role'], ['admin_pusat', 'super_admin'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
         }
 
@@ -363,7 +389,10 @@ class UserManagement extends BaseController
 
     public function delete($id)
     {
-        if (!$this->validateAdminSession()) {
+        $session = session();
+        $user = $session->get('user');
+        
+        if (!$session->get('isLoggedIn') || !isset($user['role']) || !in_array($user['role'], ['admin_pusat', 'super_admin'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
         }
 
@@ -388,13 +417,111 @@ class UserManagement extends BaseController
         }
     }
 
-    private function validateAdminSession(): bool
+    public function import()
+    {
+        // Set JSON response header
+        $this->response->setContentType('application/json');
+        
+        $session = session();
+        $user = $session->get('user');
+        
+        if (!$session->get('isLoggedIn') || !isset($user['role']) || !in_array($user['role'], ['admin_pusat', 'super_admin'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        try {
+            $file = $this->request->getFile('excel_file');
+            $skipDuplicates = $this->request->getPost('skip_duplicates') === 'on';
+
+            log_message('info', 'Import started - File: ' . ($file ? $file->getName() : 'null'));
+
+            if (!$file || !$file->isValid()) {
+                log_message('error', 'File not valid: ' . ($file ? $file->getErrorString() : 'null'));
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'File Excel tidak valid: ' . ($file ? $file->getErrorString() : 'File tidak ditemukan')
+                ]);
+            }
+
+            // Validate file size (max 5MB)
+            $fileSize = $file->getSize();
+            
+            // Validate file - cek MIME type saja (lebih reliable daripada ekstensi)
+            $clientMimeType = $file->getClientMimeType();
+            $originalName = $file->getClientName();
+            
+            log_message('info', 'File upload - Name: ' . $originalName . ', MIME: ' . $clientMimeType . ', Size: ' . $fileSize);
+            
+            // MIME type yang valid untuk Excel .xlsx
+            $validMimeTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/zip', // .xlsx kadang terdeteksi sebagai zip
+                'application/octet-stream' // Fallback
+            ];
+            
+            if (!in_array($clientMimeType, $validMimeTypes)) {
+                log_message('warning', 'Invalid MIME type: ' . $clientMimeType);
+                // Hanya warning, tetap lanjut (biar PhpSpreadsheet yang validasi)
+            }
+            
+            if ($fileSize > 5 * 1024 * 1024) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Ukuran file maksimal 5MB (file: ' . round($fileSize / 1024 / 1024, 2) . 'MB)'
+                ]);
+            }
+
+            // Use ExcelImportService
+            $excelImportService = new \App\Services\ExcelImportService($this->userModel, $this->unitModel);
+            
+            // Import users from Excel
+            $result = $excelImportService->importUsers($file->getTempName(), $skipDuplicates);
+            
+            log_message('info', 'Import result: ' . json_encode($result));
+
+            return $this->response->setJSON($result);
+
+        } catch (\Exception $e) {
+            log_message('error', 'User import exception: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+            
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    public function downloadTemplate()
     {
         $session = session();
         $user = $session->get('user');
         
-        return $session->get('isLoggedIn') && 
-               isset($user['role']) &&
-               in_array($user['role'], ['admin_pusat', 'super_admin']);
+        if (!$session->get('isLoggedIn') || !isset($user['role']) || !in_array($user['role'], ['admin_pusat', 'super_admin'])) {
+            return redirect()->to('/auth/login')->with('error', 'Silakan login terlebih dahulu');
+        }
+
+        try {
+            // Use ExcelTemplateService to generate Excel template
+            $excelTemplateService = new \App\Services\ExcelTemplateService();
+            $filepath = $excelTemplateService->generateTemplate();
+            
+            // Set headers for Excel download
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment;filename="template_import_users.xlsx"');
+            header('Cache-Control: max-age=0');
+            
+            // Output file
+            readfile($filepath);
+            
+            // Delete temporary file
+            unlink($filepath);
+            
+            exit;
+
+        } catch (\Exception $e) {
+            log_message('error', 'Download template error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal download template: ' . $e->getMessage());
+        }
     }
 }

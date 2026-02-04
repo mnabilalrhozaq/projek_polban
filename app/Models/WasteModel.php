@@ -16,9 +16,11 @@ class WasteModel extends Model
         'unit_id',
         'tps_id',
         'kategori_id',
+        'user_id',
         'created_by',
         'tanggal',
         'jenis_sampah',
+        'nama_sampah',  // Nama detail sampah (Keyboard Bekas, dll)
         'satuan',
         'jumlah',
         'berat_kg',
@@ -27,7 +29,21 @@ class WasteModel extends Model
         'kategori_sampah',
         'nilai_rupiah',
         'status',
-        'catatan_admin'
+        'catatan_admin',
+        'tps_reviewed_by',
+        'tps_reviewed_at',
+        'tps_catatan',
+        'admin_reviewed_by',
+        'admin_reviewed_at',
+        'admin_catatan',
+        'batch_id',
+        'bukti_foto',
+        'nama_pelapor',
+        'gedung_pelapor',
+        'reviewed_by',
+        'reviewed_at',
+        'action_timestamp',
+        'unit_pengirim_id'
     ];
 
     protected bool $allowEmptyInserts = false;
@@ -49,11 +65,11 @@ class WasteModel extends Model
     protected $validationRules = [
         'unit_id' => 'required|integer',
         'tanggal' => 'required|valid_date',
-        'jenis_sampah' => 'required|max_length[100]', // Ubah dari in_list ke max_length
+        'jenis_sampah' => 'required|max_length[100]',
         'satuan' => 'required|max_length[10]',
         'jumlah' => 'required|numeric|greater_than[0]',
-        'gedung' => 'required|max_length[50]',
-        'status' => 'required|in_list[draft,dikirim,review,disetujui,perlu_revisi]'
+        'gedung' => 'required|max_length[50]'
+        // Status validation removed - will be set by application logic
     ];
 
     protected $validationMessages = [

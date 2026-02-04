@@ -28,10 +28,15 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+            max-width: 100vw;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             color: var(--text-dark);
-            overflow-x: hidden;
         }
 
         /* Navbar */
@@ -97,6 +102,7 @@
             padding: 140px 0 80px;
             position: relative;
             overflow: hidden;
+            width: 100%;
         }
 
         .hero::before {
@@ -109,11 +115,13 @@
             background: linear-gradient(135deg, rgba(92, 140, 191, 0.1) 0%, rgba(92, 140, 191, 0.05) 100%);
             border-radius: 50%;
             transform: translateY(-20%);
+            pointer-events: none;
         }
 
         .hero-content {
             position: relative;
             z-index: 2;
+            max-width: 100%;
         }
 
         .hero h1 {
@@ -163,6 +171,8 @@
         .features {
             padding: 80px 0;
             background: white;
+            width: 100%;
+            overflow: hidden;
         }
 
         .section-title {
@@ -240,6 +250,8 @@
             padding: 80px 0;
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             color: white;
+            width: 100%;
+            overflow: hidden;
         }
 
         .stats-grid {
@@ -247,6 +259,7 @@
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 2rem;
             margin-top: 3rem;
+            width: 100%;
         }
 
         .stat-box {
@@ -286,6 +299,8 @@
             padding: 80px 0;
             background: var(--light-bg);
             text-align: center;
+            width: 100%;
+            overflow: hidden;
         }
 
         .cta-section h2 {
@@ -326,6 +341,8 @@
             background: var(--text-dark);
             color: white;
             padding: 3rem 0 1.5rem;
+            width: 100%;
+            overflow: hidden;
         }
 
         .footer-content {
@@ -333,6 +350,7 @@
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 2rem;
             margin-bottom: 2rem;
+            width: 100%;
         }
 
         .footer h4 {
@@ -376,6 +394,15 @@
 
         /* Responsive */
         @media (max-width: 768px) {
+            .container {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+
+            .hero {
+                padding: 100px 0 60px;
+            }
+
             .hero h1 {
                 font-size: 2rem;
             }
@@ -386,18 +413,95 @@
 
             .hero-stats {
                 gap: 1rem;
+                justify-content: center;
             }
 
             .stat-number {
                 font-size: 2rem;
             }
 
+            .stat-label {
+                font-size: 0.8rem;
+            }
+
             .section-title h2 {
                 font-size: 2rem;
             }
 
+            .section-title p {
+                font-size: 1rem;
+            }
+
             .feature-card {
                 margin-bottom: 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+
+            .navbar-brand i {
+                font-size: 1.2rem;
+            }
+
+            .btn-login {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .cta-section h2 {
+                font-size: 1.8rem;
+            }
+
+            .cta-section p {
+                font-size: 1rem;
+            }
+
+            .btn-cta {
+                padding: 0.8rem 2rem;
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 {
+                font-size: 1.5rem;
+            }
+
+            .hero p {
+                font-size: 0.9rem;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+
+            .section-title h2 {
+                font-size: 1.5rem;
+            }
+
+            .feature-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+
+            .feature-card h3 {
+                font-size: 1.1rem;
+            }
+
+            .stat-box h3 {
+                font-size: 2rem;
             }
         }
     </style>

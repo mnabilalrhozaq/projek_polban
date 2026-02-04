@@ -174,4 +174,36 @@ _modules/*
 #-------------------------
 # Custom Project Files
 #-------------------------
-# Add any project-specific files to ignore here
+# Documentation files (development only)
+*_GUIDE.md
+*_IMPLEMENTATION.md
+*_REQUIREMENTS.md
+FITUR_*.md
+CARA_*.md
+SPEC_*.md
+TASK_*.md
+SUMMARY_*.md
+PERBAIKAN_*.md
+PANDUAN_*.md
+LAPORAN_*.md
+IMPLEMENTASI_*.md
+PROJECT_STRUCTURE.md
+
+# SQL backup files
+eksperimen*.sql
+backup*.sql
+
+# Test PHP files
+public/test-*.php
+public/phpinfo.php
+public/insert_data.php
+php.ini
+
+# Session files
+public/null/
+
+# Kiro specs (development only)
+.kiro/specs/
+
+# Database migration backups
+/database/

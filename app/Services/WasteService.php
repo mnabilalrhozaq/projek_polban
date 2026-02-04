@@ -106,7 +106,7 @@ class WasteService
                 'berat_kg' => $data['berat_kg'],
                 'keterangan' => $data['keterangan'] ?? '',
                 'status' => 'pending',
-                'created_by' => $user['id'],
+                'user_id' => $user['id'],  // Changed from created_by to user_id
                 'created_at' => date('Y-m-d H:i:s')
             ];
 
@@ -268,7 +268,7 @@ class WasteService
         return $this->wasteModel
             ->select('waste.*, master_harga_sampah.jenis_sampah as kategori, master_harga_sampah.harga_per_satuan as harga_per_kg, users.nama_lengkap as created_by_name')
             ->join('master_harga_sampah', 'master_harga_sampah.id = waste.kategori_id', 'left')
-            ->join('users', 'users.id = waste.created_by', 'left')
+            ->join('users', 'users.id = waste.user_id', 'left')
             ->where('waste.unit_id', $unitId)
             ->orderBy('waste.created_at', 'DESC')
             ->findAll();
@@ -279,7 +279,7 @@ class WasteService
         return $this->wasteModel
             ->select('waste.*, master_harga_sampah.jenis_sampah as kategori, master_harga_sampah.harga_per_satuan as harga_per_kg, users.nama_lengkap as created_by_name')
             ->join('master_harga_sampah', 'master_harga_sampah.id = waste.kategori_id', 'left')
-            ->join('users', 'users.id = waste.created_by', 'left')
+            ->join('users', 'users.id = waste.user_id', 'left')
             ->where('waste.unit_id', $tpsId)
             ->orderBy('waste.created_at', 'DESC')
             ->findAll();

@@ -41,7 +41,10 @@ class DashboardService
                 'wasteOverallStats' => $this->getWasteOverallStats($tpsId),
                 'wasteManagementSummary' => $this->getWasteManagementSummary($tpsId),
                 'recent_waste' => $this->getRecentWaste($tpsId),
-                'monthly_summary' => $this->getMonthlySummary($tpsId)
+                'recent_activities' => $this->getRecentActivities($user['id'], $tpsId),
+                'monthly_summary' => $this->getMonthlySummary($tpsId),
+                'approved_data' => $this->getApprovedData($tpsId),
+                'rejected_data' => $this->getRejectedData($tpsId)
             ];
         } catch (\Exception $e) {
             log_message('error', 'TPS Dashboard Service Error: ' . $e->getMessage());
@@ -58,8 +61,58 @@ class DashboardService
                 'wasteOverallStats' => [],
                 'wasteManagementSummary' => [],
                 'recent_waste' => [],
-                'monthly_summary' => []
+                'monthly_summary' => [],
+                'approved_data' => [],
+                'rejected_data' => []
             ];
+        }
+    }
+
+    private function getApprovedData(int $tpsId): array
+    {
+        try {
+            $db = \Config\Database::connect();
+            
+            // Get data yang sudah disetujui oleh TPS
+            return $db->table('waste_management')
+                ->select('waste_management.*, 
+                         unit.nama_unit as unit_nama, 
+                         users.nama_lengkap as user_nama')
+                ->join('unit', 'unit.id = waste_management.unit_id', 'left')
+                ->join('users', 'users.id = waste_management.user_id', 'left')
+                ->where('waste_management.status', 'disetujui_tps')
+                ->where('waste_management.tps_reviewed_by', session()->get('user')['id'])
+                ->orderBy('waste_management.tps_reviewed_at', 'DESC')
+                ->limit(20)
+                ->get()
+                ->getResultArray();
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting approved data: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function getRejectedData(int $tpsId): array
+    {
+        try {
+            $db = \Config\Database::connect();
+            
+            // Get data yang ditolak oleh TPS
+            return $db->table('waste_management')
+                ->select('waste_management.*, 
+                         unit.nama_unit as unit_nama, 
+                         users.nama_lengkap as user_nama')
+                ->join('unit', 'unit.id = waste_management.unit_id', 'left')
+                ->join('users', 'users.id = waste_management.user_id', 'left')
+                ->where('waste_management.status', 'ditolak_tps')
+                ->where('waste_management.tps_reviewed_by', session()->get('user')['id'])
+                ->orderBy('waste_management.tps_reviewed_at', 'DESC')
+                ->limit(20)
+                ->get()
+                ->getResultArray();
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting rejected data: ' . $e->getMessage());
+            return [];
         }
     }
 
@@ -132,6 +185,100 @@ class DashboardService
             log_message('error', 'Error getting monthly summary: ' . $e->getMessage());
             return [];
         }
+    }
+
+    private function getRecentActivities(int $userId, int $tpsId): array
+    {
+        if (!isFeatureEnabled('dashboard_recent_activity', 'pengelola_tps')) {
+            return [];
+        }
+
+        try {
+            $maxItems = 10;
+            
+            $recentWaste = $this->wasteModel
+                ->select('waste_management.*, users.nama_lengkap as reviewer_name')
+                ->join('users', 'users.id = waste_management.reviewed_by', 'left')
+                ->where('waste_management.unit_id', $tpsId)
+                ->orderBy('waste_management.updated_at', 'DESC')
+                ->limit($maxItems)
+                ->findAll();
+            
+            $activities = [];
+            foreach ($recentWaste as $waste) {
+                $activities[] = [
+                    'id' => $waste['id'],
+                    'icon' => $this->getStatusIcon($waste['status']),
+                    'message' => $this->getActivityMessage($waste),
+                    'time' => $this->timeAgo($waste['updated_at']),
+                    'status' => $waste['status'],
+                    'jenis_sampah' => $waste['jenis_sampah'] ?? 'N/A',
+                    'berat_kg' => $waste['berat_kg'] ?? 0,
+                    'nilai_rupiah' => $waste['nilai_rupiah'] ?? 0,
+                    'catatan_review' => $waste['catatan_review'] ?? '',
+                    'reviewer_name' => $waste['reviewer_name'] ?? 'Admin',
+                    'tanggal_review' => $waste['reviewed_at'] ?? $waste['updated_at'],
+                    'has_detail' => in_array($waste['status'], ['disetujui', 'ditolak'])
+                ];
+            }
+            
+            return $activities;
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting recent activities: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function getStatusIcon(string $status): string
+    {
+        switch ($status) {
+            case 'draft':
+                return 'edit';
+            case 'dikirim':
+            case 'review':
+                return 'clock';
+            case 'disetujui':
+                return 'check-circle';
+            case 'ditolak':
+            case 'perlu_revisi':
+                return 'x-circle';
+            default:
+                return 'circle';
+        }
+    }
+
+    private function getActivityMessage(array $waste): string
+    {
+        $kategori = $waste['jenis_sampah'] ?? 'Sampah';
+        $berat = $waste['berat_kg'] ?? 0;
+        
+        switch ($waste['status']) {
+            case 'draft':
+                return "Data Sampah {$berat}kg disimpan sebagai draft";
+            case 'dikirim':
+            case 'review':
+                return "Data Sampah {$berat}kg dikirim untuk review";
+            case 'disetujui':
+                return "Data Sampah {$berat}kg disetujui";
+            case 'ditolak':
+            case 'perlu_revisi':
+                return "Data Sampah {$berat}kg ditolak";
+            default:
+                return "Data Sampah {$berat}kg diperbarui";
+        }
+    }
+
+    private function timeAgo(string $datetime): string
+    {
+        $time = time() - strtotime($datetime);
+        
+        if ($time < 60) return 'Baru saja';
+        if ($time < 3600) return floor($time/60) . ' menit yang lalu';
+        if ($time < 86400) return floor($time/3600) . ' jam yang lalu';
+        if ($time < 2592000) return floor($time/86400) . ' hari yang lalu';
+        
+        return date('d/m/Y', strtotime($datetime));
     }
 
     private function getDefaultStats(): array

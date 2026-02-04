@@ -30,8 +30,16 @@ $tps_info = $tps_info ?? ['nama_unit' => 'TPS'];
     <title><?= $title ?? 'Manajemen Sampah TPS' ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
     <!-- Mobile Responsive CSS -->
     <link href="<?= base_url('/css/mobile-responsive.css') ?>" rel="stylesheet">
+    <!-- Enhancement CSS -->
+    <link href="<?= base_url('/css/toast-notification.css') ?>" rel="stylesheet">
+    <link href="<?= base_url('/css/loading-state.css') ?>" rel="stylesheet">
+    <link href="<?= base_url('/css/confirmation-dialog.css') ?>" rel="stylesheet">
+    <link href="<?= base_url('/css/tooltip-helper.css') ?>" rel="stylesheet">
 </head>
 <body>
     <?= $this->include('partials/sidebar') ?>
@@ -126,6 +134,9 @@ $tps_info = $tps_info ?? ['nama_unit' => 'TPS'];
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addWasteModal">
                 <i class="fas fa-plus"></i> Tambah Data Sampah
             </button>
+            <a href="<?= base_url('/pengelola-tps/waste/export-excel') ?>" class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </a>
             <a href="<?= base_url('/pengelola-tps/waste/export-pdf') ?>" class="btn btn-danger" target="_blank">
                 <i class="fas fa-file-pdf"></i> Export PDF
             </a>
@@ -231,95 +242,235 @@ $tps_info = $tps_info ?? ['nama_unit' => 'TPS'];
         </div>
         <?php endif; ?>
 
-        <!-- Waste Data Table -->
+        <!-- Waste Data Table with Tabs -->
         <div class="card">
             <div class="card-header">
                 <h3><i class="fas fa-list"></i> Data Sampah TPS</h3>
             </div>
             <div class="card-body">
-                <?php if (!empty($waste_list)): ?>
-                    <div class="table-responsive">
-                        <table class="table table-hover" style="table-layout: auto; min-width: 100%;">
-                            <thead>
-                                <tr>
-                                    <th style="width: 50px;">No</th>
-                                    <th style="width: 140px;">Tanggal</th>
-                                    <th style="width: 150px;">Jenis Sampah</th>
-                                    <th style="width: 80px;">Berat</th>
-                                    <th style="width: 70px;">Satuan</th>
-                                    <th style="width: 100px;">Harga/Satuan</th>
-                                    <th style="width: 120px;">Total Nilai</th>
-                                    <th style="width: 100px;">Status</th>
-                                    <th style="width: 120px; min-width: 120px;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($waste_list as $index => $waste): ?>
-                                <tr>
-                                    <td><?= $index + 1 ?></td>
-                                    <td><?= date('d/m/Y H:i', strtotime($waste['created_at'])) ?></td>
-                                    <td>
-                                        <span class="badge bg-primary"><?= $waste['jenis_sampah'] ?? 'N/A' ?></span>
-                                    </td>
-                                    <td><?php 
-                                        // Format angka tanpa desimal yang tidak perlu
-                                        $berat = $waste['berat_kg'] ?? $waste['berat'] ?? $waste['jumlah_berat'] ?? 0;
-                                        $jumlah = $waste['jumlah'] ?? $berat;
-                                        // Jika angka bulat, tampilkan tanpa desimal
-                                        echo ($jumlah == floor($jumlah)) ? number_format($jumlah, 0, ',', '.') : number_format($jumlah, 2, ',', '.');
-                                    ?></td>
-                                    <td><?= $waste['satuan'] ?? 'kg' ?></td>
-                                    <td>-</td>
-                                    <td><?= formatCurrency($waste['nilai_rupiah'] ?? 0) ?></td>
-                                    <td>
-                                        <?php
-                                        $statusClass = match($waste['status'] ?? 'draft') {
-                                            'disetujui' => 'success',
-                                            'dikirim' => 'info',
-                                            'review' => 'warning',
-                                            'perlu_revisi' => 'danger',
-                                            'draft' => 'secondary',
-                                            default => 'secondary'
-                                        };
-                                        $statusLabel = match($waste['status'] ?? 'draft') {
-                                            'disetujui' => 'Disetujui',
-                                            'dikirim' => 'Dikirim',
-                                            'review' => 'Review',
-                                            'perlu_revisi' => 'Perlu Revisi',
-                                            'draft' => 'Draft',
-                                            default => 'Draft'
-                                        };
-                                        ?>
-                                        <span class="badge bg-<?= $statusClass ?>"><?= $statusLabel ?></span>
-                                    </td>
-                                    <td style="white-space: nowrap;">
-                                        <?php if (in_array($waste['status'] ?? 'draft', ['draft', 'perlu_revisi'])): ?>
-                                        <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-outline-primary" onclick="editWaste(<?= $waste['id'] ?>)">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-outline-danger" onclick="deleteWaste(<?= $waste['id'] ?>)">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                        <?php else: ?>
-                                        <span class="text-muted" style="font-size: 11px;">Tidak dapat diedit</span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php else: ?>
-                    <div class="empty-state">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">Belum ada data sampah. Mulai dengan menambah data baru.</p>
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addWasteModal">
-                            <i class="fas fa-plus"></i> Tambah Data Pertama
+                <?php
+                // Separate waste data by status
+                $draft_dikirim = [];
+                $disetujui = [];
+                $ditolak = [];
+                
+                foreach ($waste_list as $waste) {
+                    $status = $waste['status'] ?? 'draft';
+                    if (in_array($status, ['draft', 'dikirim', 'review', 'perlu_revisi'])) {
+                        $draft_dikirim[] = $waste;
+                    } elseif ($status === 'disetujui') {
+                        $disetujui[] = $waste;
+                    } elseif ($status === 'ditolak') {
+                        $ditolak[] = $waste;
+                    }
+                }
+                ?>
+                
+                <!-- Tabs Navigation -->
+                <ul class="nav nav-tabs mb-4" id="wasteDataTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="draft-tab" data-bs-toggle="tab" data-bs-target="#draft-content" type="button" role="tab">
+                            <i class="fas fa-edit"></i> Draft & Dikirim 
+                            <span class="badge bg-primary ms-1"><?= count($draft_dikirim) ?></span>
                         </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved-content" type="button" role="tab">
+                            <i class="fas fa-check-circle"></i> Disetujui 
+                            <span class="badge bg-success ms-1"><?= count($disetujui) ?></span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected-content" type="button" role="tab">
+                            <i class="fas fa-times-circle"></i> Ditolak 
+                            <span class="badge bg-danger ms-1"><?= count($ditolak) ?></span>
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tabs Content -->
+                <div class="tab-content" id="wasteDataTabsContent">
+                    <!-- Draft & Dikirim Tab -->
+                    <div class="tab-pane fade show active" id="draft-content" role="tabpanel">
+                        <?php if (!empty($draft_dikirim)): ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px;">No</th>
+                                            <th style="width: 140px;">Tanggal</th>
+                                            <th style="width: 150px;">Jenis Sampah</th>
+                                            <th style="width: 80px;">Berat</th>
+                                            <th style="width: 70px;">Satuan</th>
+                                            <th style="width: 120px;">Total Nilai</th>
+                                            <th style="width: 100px;">Status</th>
+                                            <th style="width: 120px;">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($draft_dikirim as $index => $waste): ?>
+                                        <tr>
+                                            <td><?= $index + 1 ?></td>
+                                            <td><?= date('d/m/Y H:i', strtotime($waste['created_at'])) ?></td>
+                                            <td>
+                                                <span class="badge bg-primary"><?= $waste['jenis_sampah'] ?? 'N/A' ?></span>
+                                            </td>
+                                            <td><?php 
+                                                $berat = $waste['berat_kg'] ?? $waste['berat'] ?? $waste['jumlah_berat'] ?? 0;
+                                                $jumlah = $waste['jumlah'] ?? $berat;
+                                                echo ($jumlah == floor($jumlah)) ? number_format($jumlah, 0, ',', '.') : number_format($jumlah, 2, ',', '.');
+                                            ?></td>
+                                            <td><?= $waste['satuan'] ?? 'kg' ?></td>
+                                            <td><?= formatCurrency($waste['nilai_rupiah'] ?? 0) ?></td>
+                                            <td>
+                                                <?php
+                                                $statusClass = match($waste['status'] ?? 'draft') {
+                                                    'dikirim' => 'info',
+                                                    'review' => 'warning',
+                                                    'perlu_revisi' => 'danger',
+                                                    'draft' => 'secondary',
+                                                    default => 'secondary'
+                                                };
+                                                $statusLabel = match($waste['status'] ?? 'draft') {
+                                                    'dikirim' => 'Dikirim',
+                                                    'review' => 'Review',
+                                                    'perlu_revisi' => 'Perlu Revisi',
+                                                    'draft' => 'Draft',
+                                                    default => 'Draft'
+                                                };
+                                                ?>
+                                                <span class="badge bg-<?= $statusClass ?>"><?= $statusLabel ?></span>
+                                            </td>
+                                            <td>
+                                                <?php if (in_array($waste['status'] ?? 'draft', ['draft', 'perlu_revisi'])): ?>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button type="button" class="btn btn-outline-primary" onclick="editWaste(<?= $waste['id'] ?>)">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-danger" onclick="deleteWaste(<?= $waste['id'] ?>)">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                                <?php else: ?>
+                                                <span class="text-muted" style="font-size: 11px;">Sedang direview</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <div class="empty-state">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Belum ada data draft atau yang dikirim.</p>
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addWasteModal">
+                                    <i class="fas fa-plus"></i> Tambah Data Baru
+                                </button>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
+
+                    <!-- Disetujui Tab -->
+                    <div class="tab-pane fade" id="approved-content" role="tabpanel">
+                        <?php if (!empty($disetujui)): ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px;">No</th>
+                                            <th style="width: 140px;">Tanggal</th>
+                                            <th style="width: 150px;">Jenis Sampah</th>
+                                            <th style="width: 80px;">Berat</th>
+                                            <th style="width: 70px;">Satuan</th>
+                                            <th style="width: 120px;">Total Nilai</th>
+                                            <th style="width: 100px;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($disetujui as $index => $waste): ?>
+                                        <tr>
+                                            <td><?= $index + 1 ?></td>
+                                            <td><?= date('d/m/Y H:i', strtotime($waste['created_at'])) ?></td>
+                                            <td>
+                                                <span class="badge bg-primary"><?= $waste['jenis_sampah'] ?? 'N/A' ?></span>
+                                            </td>
+                                            <td><?php 
+                                                $berat = $waste['berat_kg'] ?? $waste['berat'] ?? $waste['jumlah_berat'] ?? 0;
+                                                $jumlah = $waste['jumlah'] ?? $berat;
+                                                echo ($jumlah == floor($jumlah)) ? number_format($jumlah, 0, ',', '.') : number_format($jumlah, 2, ',', '.');
+                                            ?></td>
+                                            <td><?= $waste['satuan'] ?? 'kg' ?></td>
+                                            <td><?= formatCurrency($waste['nilai_rupiah'] ?? 0) ?></td>
+                                            <td>
+                                                <span class="badge bg-success">Disetujui</span>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <div class="empty-state">
+                                <i class="fas fa-check-circle fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Belum ada data yang disetujui.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Ditolak Tab -->
+                    <div class="tab-pane fade" id="rejected-content" role="tabpanel">
+                        <?php if (!empty($ditolak)): ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px;">No</th>
+                                            <th style="width: 140px;">Tanggal</th>
+                                            <th style="width: 150px;">Jenis Sampah</th>
+                                            <th style="width: 80px;">Berat</th>
+                                            <th style="width: 70px;">Satuan</th>
+                                            <th style="width: 120px;">Total Nilai</th>
+                                            <th style="width: 100px;">Status</th>
+                                            <th style="width: 200px;">Alasan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($ditolak as $index => $waste): ?>
+                                        <tr>
+                                            <td><?= $index + 1 ?></td>
+                                            <td><?= date('d/m/Y H:i', strtotime($waste['created_at'])) ?></td>
+                                            <td>
+                                                <span class="badge bg-primary"><?= $waste['jenis_sampah'] ?? 'N/A' ?></span>
+                                            </td>
+                                            <td><?php 
+                                                $berat = $waste['berat_kg'] ?? $waste['berat'] ?? $waste['jumlah_berat'] ?? 0;
+                                                $jumlah = $waste['jumlah'] ?? $berat;
+                                                echo ($jumlah == floor($jumlah)) ? number_format($jumlah, 0, ',', '.') : number_format($jumlah, 2, ',', '.');
+                                            ?></td>
+                                            <td><?= $waste['satuan'] ?? 'kg' ?></td>
+                                            <td><?= formatCurrency($waste['nilai_rupiah'] ?? 0) ?></td>
+                                            <td>
+                                                <span class="badge bg-danger">Ditolak</span>
+                                            </td>
+                                            <td>
+                                                <small class="text-danger">
+                                                    <?= !empty($waste['catatan_review']) ? htmlspecialchars($waste['catatan_review']) : 'Tidak ada catatan' ?>
+                                                </small>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <div class="empty-state">
+                                <i class="fas fa-times-circle fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Belum ada data yang ditolak.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -337,7 +488,7 @@ $tps_info = $tps_info ?? ['nama_unit' => 'TPS'];
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="kategori_id" class="form-label">Jenis Sampah *</label>
-                            <select class="form-select" id="kategori_id" name="kategori_id" required>
+                            <select class="form-select select2-dropdown" id="kategori_id" name="kategori_id" required>
                                 <option value="">Pilih Jenis Sampah</option>
                                 <?php 
                                 // Gunakan allCategories untuk dropdown (semua data tanpa pagination)
@@ -353,6 +504,7 @@ $tps_info = $tps_info ?? ['nama_unit' => 'TPS'];
                                 </option>
                                 <?php endforeach; ?>
                             </select>
+                            <small class="text-muted"><i class="fas fa-info-circle"></i>pada saat pemilihan jenis sampah bisa search dan scroll </small>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
@@ -385,6 +537,17 @@ $tps_info = $tps_info ?? ['nama_unit' => 'TPS'];
                             <label for="total_nilai_display" class="form-label">Total Nilai</label>
                             <input type="text" class="form-control fw-bold text-success" id="total_nilai_display" name="total_nilai_display" readonly value="Rp 0" style="font-size: 1.2em;">
                             <small class="text-muted">* Hanya untuk sampah yang dapat dijual</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="foto" class="form-label">
+                                Bukti Foto * 
+                                <i class="fas fa-info-circle text-muted" data-tooltip="Upload foto bukti sampah. Format: JPG, PNG, JPEG. Maksimal 2MB. WAJIB diisi!" data-tooltip-position="top"></i>
+                            </label>
+                            <input type="file" class="form-control" id="foto" name="foto" accept="image/jpeg,image/png,image/jpg" required>
+                            <small class="text-danger"><i class="fas fa-exclamation-triangle"></i> Foto bukti WAJIB diupload agar data bisa masuk ke sistem admin</small>
+                            <div id="foto_preview" class="mt-2" style="display: none;">
+                                <img id="foto_preview_img" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #ddd;">
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -465,6 +628,13 @@ $tps_info = $tps_info ?? ['nama_unit' => 'TPS'];
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- Enhancement Scripts -->
+    <script src="<?= base_url('/js/toast-notification.js') ?>"></script>
+    <script src="<?= base_url('/js/loading-state.js') ?>"></script>
+    <script src="<?= base_url('/js/confirmation-dialog.js') ?>"></script>
+    <script src="<?= base_url('/js/tooltip-helper.js') ?>"></script>
     <script>
         // Konversi satuan ke kg
         function konversiKeKg(jumlah, satuan) {
@@ -548,6 +718,45 @@ $tps_info = $tps_info ?? ['nama_unit' => 'TPS'];
             }
         }
 
+        // Initialize Select2 for dropdown with search and scroll
+        $(document).ready(function() {
+            // Initialize Select2 on kategori dropdown
+            $('#kategori_id').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Pilih Jenis Sampah',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#addWasteModal'),
+                language: {
+                    noResults: function() {
+                        return "Tidak ada hasil ditemukan";
+                    },
+                    searching: function() {
+                        return "Mencari...";
+                    },
+                    inputTooShort: function() {
+                        return "Ketik untuk mencari...";
+                    }
+                }
+            });
+
+            // Add search icon and placeholder to Select2 search box
+            $('#kategori_id').on('select2:open', function() {
+                // Add placeholder with icon
+                $('.select2-search__field').attr('placeholder', ' Cari jenis sampah...');
+                
+                // Add search icon wrapper
+                if (!$('.select2-search--dropdown').find('.search-icon-wrapper').length) {
+                    $('.select2-search--dropdown').prepend('<div class="search-icon-wrapper"><i class="fas fa-search"></i></div>');
+                }
+            });
+
+            // Trigger change event when Select2 changes
+            $('#kategori_id').on('select2:select', function(e) {
+                calculateEstimate();
+            });
+        });
+
         // Add event listeners
         document.getElementById('kategori_id').addEventListener('change', function() {
             // Set satuan default saat kategori dipilih
@@ -560,16 +769,69 @@ $tps_info = $tps_info ?? ['nama_unit' => 'TPS'];
         document.getElementById('jumlah').addEventListener('input', calculateEstimate);
         document.getElementById('satuan').addEventListener('change', calculateEstimate);
 
+        // Preview foto
+        document.getElementById('foto').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validasi ukuran file (max 2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('Ukuran file terlalu besar! Maksimal 2MB');
+                    this.value = '';
+                    document.getElementById('foto_preview').style.display = 'none';
+                    return;
+                }
+                
+                // Validasi tipe file
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Format file tidak didukung! Gunakan JPG, PNG, atau JPEG');
+                    this.value = '';
+                    document.getElementById('foto_preview').style.display = 'none';
+                    return;
+                }
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('foto_preview_img').src = e.target.result;
+                    document.getElementById('foto_preview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                document.getElementById('foto_preview').style.display = 'none';
+            }
+        });
+
         // Submit add waste form
+        let isSubmitting = false; // Prevent double submit
         document.getElementById('addWasteForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            
+            // Prevent double submit
+            if (isSubmitting) {
+                console.log('Form already submitting, ignoring...');
+                return;
+            }
+            
+            // Validasi semua field required
+            const kategoriId = document.getElementById('kategori_id').value;
+            const jumlah = document.getElementById('jumlah').value;
+            const satuan = document.getElementById('satuan').value;
+            const foto = document.getElementById('foto').files[0];
+            
+            if (!kategoriId || !jumlah || !satuan || !foto) {
+                alert('⚠️ Penginputan data tidak lengkap! Semua field wajib diisi termasuk foto bukti.');
+                return;
+            }
+            
+            isSubmitting = true; // Set flag
             
             const formData = new FormData(this);
             
             // Konversi jumlah ke kg untuk disimpan
-            const jumlah = parseFloat(formData.get('jumlah')) || 0;
-            const satuan = formData.get('satuan');
-            const beratKg = konversiKeKg(jumlah, satuan);
+            const jumlahValue = parseFloat(formData.get('jumlah')) || 0;
+            const satuanValue = formData.get('satuan');
+            const beratKg = konversiKeKg(jumlahValue, satuanValue);
             
             // Tambahkan berat_kg ke form data
             formData.append('berat_kg', beratKg);
@@ -577,6 +839,10 @@ $tps_info = $tps_info ?? ['nama_unit' => 'TPS'];
             // Get action from clicked button
             const action = e.submitter ? e.submitter.value : 'draft';
             formData.append('status_action', action);
+            
+            // Disable all submit buttons
+            const allSubmitBtns = this.querySelectorAll('button[type="submit"]');
+            allSubmitBtns.forEach(btn => btn.disabled = true);
             
             fetch('<?= base_url('/pengelola-tps/waste/save') ?>', {
                 method: 'POST',
@@ -588,11 +854,15 @@ $tps_info = $tps_info ?? ['nama_unit' => 'TPS'];
                     location.reload();
                 } else {
                     alert('Error: ' + data.message);
+                    allSubmitBtns.forEach(btn => btn.disabled = false);
+                    isSubmitting = false; // Reset flag
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 alert('Terjadi kesalahan saat menyimpan data');
+                allSubmitBtns.forEach(btn => btn.disabled = false);
+                isSubmitting = false; // Reset flag
             });
         });
 
@@ -758,6 +1028,43 @@ body {
     min-height: 100vh;
     max-width: calc(100vw - 280px);
     overflow-x: hidden;
+}
+
+/* ===== DROPDOWN SCROLL ===== */
+/* Make dropdown scrollable with max height */
+select.scrollable-dropdown {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Style for dropdown options - browser will handle scrolling automatically */
+select.form-select option {
+    padding: 10px 12px;
+}
+
+/* Custom scrollbar for dropdown (webkit browsers) - applies to dropdown menu */
+select.scrollable-dropdown::-webkit-scrollbar {
+    width: 10px;
+}
+
+select.scrollable-dropdown::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 5px;
+}
+
+select.scrollable-dropdown::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    border-radius: 5px;
+}
+
+select.scrollable-dropdown::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+}
+
+/* Firefox scrollbar */
+select.scrollable-dropdown {
+    scrollbar-width: thin;
+    scrollbar-color: #2a5298 #f1f1f1;
 }
 
 /* ===== PAGE HEADER ===== */
@@ -1008,12 +1315,48 @@ body {
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
+/* ===== TABS STYLING ===== */
+.nav-tabs {
+    border-bottom: 2px solid #e9ecef;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 600;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+    border-radius: 8px 8px 0 0;
+    margin-right: 5px;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #2c3e50;
+    background: #f8f9fa;
+}
+
+.nav-tabs .nav-link.active {
+    color: #2c3e50;
+    background: white;
+    border-bottom: 3px solid #007bff;
+}
+
+.nav-tabs .nav-link .badge {
+    font-size: 11px;
+    padding: 3px 8px;
+}
+
+.tab-content {
+    padding-top: 20px;
+}
+
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 768px) {
     .main-content {
         margin-left: 0;
         padding: 20px;
         max-width: 100vw;
+        overflow-x: hidden;
     }
     
     .page-header h1 {
@@ -1022,6 +1365,11 @@ body {
     
     .action-buttons {
         flex-direction: column;
+        width: 100%;
+    }
+
+    .action-buttons .btn {
+        width: 100%;
     }
     
     .stats-grid {
@@ -1055,10 +1403,54 @@ body {
     
     .table-responsive {
         font-size: 12px;
+        max-width: 100%;
+        overflow-x: auto;
     }
     
     .btn-group {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 3px;
+    }
+
+    .btn-group .btn {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+
+    /* Fix price cards */
+    .price-card {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* Fix row columns */
+    .row {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .row > [class*="col-"] {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    /* Tabs responsive */
+    .nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .nav-tabs .nav-link {
+        white-space: nowrap;
+        font-size: 13px;
+        padding: 10px 15px;
+    }
+    
+    .nav-tabs .nav-link .badge {
+        font-size: 10px;
+        padding: 2px 6px;
     }
 }
 </style>

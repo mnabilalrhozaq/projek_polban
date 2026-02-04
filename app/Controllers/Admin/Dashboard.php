@@ -36,7 +36,8 @@ class Dashboard extends BaseController
                 'recentPriceChanges' => $data['recentPriceChanges'],
                 'wasteByType' => $data['wasteByType'],
                 'pager' => $data['pager'],
-                'currentPage' => $page
+                'currentPage' => $page,
+                'monthlySummary' => $data['monthlySummary']
             ];
 
             return view('admin_pusat/dashboard', $viewData);
@@ -59,6 +60,7 @@ class Dashboard extends BaseController
                 'wasteByType' => [],
                 'pager' => null,
                 'currentPage' => 1,
+                'monthlySummary' => [],
                 'error' => 'Terjadi kesalahan saat memuat dashboard'
             ]);
         }

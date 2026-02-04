@@ -72,7 +72,7 @@ class ReviewService
                 'reviewed_by' => session()->get('user')['id'],
                 'reviewed_at' => date('Y-m-d H:i:s'),
                 'review_notes' => $data['notes'] ?? 'Disetujui oleh admin',
-                'created_by' => $waste['created_by'] ?? null,
+                'created_by' => $waste['user_id'] ?? $waste['created_by'] ?? null,
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
@@ -141,19 +141,14 @@ class ReviewService
                 'reviewed_by' => session()->get('user')['id'],
                 'reviewed_at' => date('Y-m-d H:i:s'),
                 'review_notes' => $data['notes'],
-                'created_by' => $waste['created_by'] ?? null,
+                'created_by' => $waste['user_id'] ?? $waste['created_by'] ?? null,
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
             $db->table('laporan_waste')->insert($laporanData);
             
-            // 2. Update status and set action_timestamp (will be auto-deleted after 2 days)
-            $this->wasteModel->update($id, [
-                'status' => 'ditolak',
-                'action_timestamp' => date('Y-m-d H:i:s'),
-                'catatan_admin' => $data['notes'],
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
+            // 2. Hapus data dari waste_management (sama seperti approve)
+            $this->wasteModel->delete($id);
             
             $db->transComplete();
             
@@ -209,9 +204,9 @@ class ReviewService
         $db = \Config\Database::connect();
         
         return $db->table('laporan_waste')
-            ->select('laporan_waste.*, master_harga_sampah.jenis_sampah as kategori, units.nama_unit, users.nama_lengkap as created_by_name, reviewer.nama_lengkap as reviewed_by_name')
+            ->select('laporan_waste.*, master_harga_sampah.jenis_sampah as kategori, unit.nama_unit, users.nama_lengkap as created_by_name, reviewer.nama_lengkap as reviewed_by_name')
             ->join('master_harga_sampah', 'master_harga_sampah.id = laporan_waste.kategori_id', 'left')
-            ->join('units', 'units.id = laporan_waste.unit_id', 'left')
+            ->join('unit', 'unit.id = laporan_waste.unit_id', 'left')
             ->join('users', 'users.id = laporan_waste.created_by', 'left')
             ->join('users as reviewer', 'reviewer.id = laporan_waste.reviewed_by', 'left')
             ->whereIn('laporan_waste.status', ['approved', 'rejected'])
@@ -280,14 +275,14 @@ class ReviewService
     {
         // Implementation for sending approval notification
         // This would integrate with your notification system
-        log_message('info', "Waste ID {$waste['id']} approved - notification should be sent to user {$waste['created_by']}");
+        log_message('info', "Waste ID {$waste['id']} approved - notification should be sent to user {$waste['user_id']}");
     }
 
     private function sendRejectionNotification(array $waste, string $reason): void
     {
         // Implementation for sending rejection notification
         // This would integrate with your notification system
-        log_message('info', "Waste ID {$waste['id']} rejected - notification should be sent to user {$waste['created_by']} with reason: {$reason}");
+        log_message('info', "Waste ID {$waste['id']} rejected - notification should be sent to user {$waste['user_id']} with reason: {$reason}");
     }
 
     private function getDefaultStats(): array

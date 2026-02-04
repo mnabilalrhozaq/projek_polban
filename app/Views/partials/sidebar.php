@@ -64,7 +64,6 @@ $menus = [
             ],
             ['section' => 'DATA MANAGEMENT'],
             ['icon' => 'fa-users', 'label' => 'Manajemen Akun', 'url' => '/admin-pusat/user-management'],
-            ['icon' => 'fa-toggle-on', 'label' => 'Kelola Fitur', 'url' => '/admin-pusat/feature-toggle'],
             ['section' => 'SYSTEM'],
             ['icon' => 'fa-user-circle', 'label' => 'Profil Akun', 'url' => '/admin-pusat/profil'],
         ]
@@ -79,7 +78,7 @@ $menus = [
             ['section' => 'WASTE MANAGEMENT'],
             ['icon' => 'fa-trash-alt', 'label' => 'Data Sampah', 'url' => '/user/waste'],
             ['section' => 'AKUN'],
-            ['icon' => 'fa-user-circle', 'label' => 'Edit Profil', 'url' => '/user/profile'],
+            ['icon' => 'fa-user-circle', 'label' => 'Profil Akun', 'url' => '/user/profile'],
         ]
     ],
     'pengelola_tps' => [
@@ -89,10 +88,12 @@ $menus = [
         'color2' => '#34495e',
         'items' => [
             ['icon' => 'fa-tachometer-alt', 'label' => 'Dashboard', 'url' => '/pengelola-tps/dashboard'],
+            ['section' => 'LAPORAN'],
+            ['icon' => 'fa-inbox', 'label' => 'Laporan Masuk', 'url' => '/pengelola-tps/laporan-masuk'],
             ['section' => 'WASTE MANAGEMENT'],
             ['icon' => 'fa-trash-alt', 'label' => 'Data Sampah', 'url' => '/pengelola-tps/waste'],
             ['section' => 'AKUN'],
-            ['icon' => 'fa-user-circle', 'label' => 'Edit Profil', 'url' => '/pengelola-tps/profile'],
+            ['icon' => 'fa-user-circle', 'label' => 'Profil Akun', 'url' => '/pengelola-tps/profile'],
         ]
     ]
 ];
