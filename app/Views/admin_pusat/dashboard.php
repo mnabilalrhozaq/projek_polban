@@ -483,7 +483,7 @@ body {
 /* ===== CONTENT GRID ===== */
 .content-grid {
     display: grid;
-    grid-template-columns: 1fr 800px;
+    grid-template-columns: 2fr 1fr;
     gap: 30px;
     margin-bottom: 30px;
 }
@@ -500,8 +500,8 @@ body {
 
 /* Sidebar Two Column Layout */
 .sidebar-two-column {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 20px;
 }
 

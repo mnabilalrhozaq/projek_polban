@@ -143,7 +143,7 @@ class DashboardService
 
     /**
      * Get recent submissions (pending review)
-     * Only show data with status 'dikirim' OR data that was approved/rejected less than 2 days ago
+     * Show data from TPS that needs review or recently processed
      * 
      * @param int $limit Number of items to retrieve
      * @return array
@@ -156,11 +156,12 @@ class DashboardService
                 ->join('users', 'users.id = waste_management.user_id', 'left')
                 ->join('units', 'units.id = waste_management.unit_id', 'left')
                 ->groupStart()
-                    ->where('waste_management.status', 'dikirim')
+                    // Data from TPS waiting for admin review
+                    ->whereIn('waste_management.status', ['dikirim_ke_tps', 'disetujui_tps', 'dikirim'])
                     ->orGroupStart()
+                        // Recently approved/rejected data (last 2 days)
                         ->whereIn('waste_management.status', ['disetujui', 'ditolak'])
-                        ->where('waste_management.action_timestamp IS NOT NULL')
-                        ->where('waste_management.action_timestamp >=', date('Y-m-d H:i:s', strtotime('-2 days')))
+                        ->where('waste_management.updated_at >=', date('Y-m-d H:i:s', strtotime('-2 days')))
                     ->groupEnd()
                 ->groupEnd()
                 ->orderBy('waste_management.created_at', 'DESC')
@@ -171,6 +172,7 @@ class DashboardService
 
         } catch (\Exception $e) {
             log_message('error', 'DashboardService getRecentSubmissions error: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
             return [];
         }
     }
