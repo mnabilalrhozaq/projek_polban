@@ -9,6 +9,11 @@ use CodeIgniter\Router\RouteCollection;
 // Default route
 $routes->get('/', 'Home::index');
 
+// Debug Routes (Development only)
+if (ENVIRONMENT === 'development') {
+    $routes->get('debug/check-data', 'Debug\\DataController::checkWasteData');
+}
+
 // Auth Routes (Public)
 $routes->group('auth', function ($routes) {
     $routes->get('login', 'Auth::login');

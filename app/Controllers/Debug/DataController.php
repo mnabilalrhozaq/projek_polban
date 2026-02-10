@@ -3,101 +3,125 @@
 namespace App\Controllers\Debug;
 
 use App\Controllers\BaseController;
-use App\Models\PenilaianModel;
-use App\Models\WasteModel;
-use App\Models\UnitModel;
-use App\Models\UserModel;
 
 class DataController extends BaseController
 {
-    public function checkData()
+    public function checkWasteData()
     {
-        // Only allow in development
-        if (ENVIRONMENT !== 'development') {
-            return $this->response->setStatusCode(404);
+        $db = \Config\Database::connect();
+        
+        echo "<h1>Debug: Waste Management Data</h1>";
+        echo "<style>table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #ddd; padding: 8px; text-align: left; } th { background-color: #4CAF50; color: white; }</style>";
+        
+        // Latest 10 records
+        echo "<h2>Latest 10 Records</h2>";
+        $query = $db->query("SELECT id, unit_id, user_id, jenis_sampah, berat_kg, status, created_at 
+                             FROM waste_management 
+                             ORDER BY created_at DESC 
+                             LIMIT 10");
+        $results = $query->getResultArray();
+        
+        if (empty($results)) {
+            echo "<p style='color: red; font-weight: bold;'>NO DATA FOUND IN waste_management TABLE!</p>";
+        } else {
+            echo "<table>";
+            echo "<tr><th>ID</th><th>Unit ID</th><th>User ID</th><th>Jenis Sampah</th><th>Berat (kg)</th><th>Status</th><th>Created At</th></tr>";
+            foreach ($results as $row) {
+                $statusColor = match($row['status']) {
+                    'draft' => '#6c757d',
+                    'dikirim_ke_tps' => '#ffc107',
+                    'disetujui_tps' => '#28a745',
+                    'ditolak_tps' => '#dc3545',
+                    default => '#000'
+                };
+                echo "<tr>";
+                echo "<td>{$row['id']}</td>";
+                echo "<td>{$row['unit_id']}</td>";
+                echo "<td>{$row['user_id']}</td>";
+                echo "<td>{$row['jenis_sampah']}</td>";
+                echo "<td>{$row['berat_kg']}</td>";
+                echo "<td style='color: {$statusColor}; font-weight: bold;'>{$row['status']}</td>";
+                echo "<td>{$row['created_at']}</td>";
+                echo "</tr>";
+            }
+            echo "</table>";
         }
-
-        $penilaianModel = new PenilaianModel();
-        $wasteModel = new WasteModel();
-        $unitModel = new UnitModel();
-        $userModel = new UserModel();
-
-        // Check penilaian data with status 'dikirim'
-        $penilaianDikirim = $penilaianModel
-            ->select('penilaian_unit.*, unit.nama_unit')
-            ->join('unit', 'unit.id = penilaian_unit.unit_id')
-            ->where('penilaian_unit.status', 'dikirim')
-            ->findAll();
-
-        // Check waste data with status 'dikirim'
-        $wasteDikirim = $wasteModel
-            ->select('waste_management.*, unit.nama_unit')
-            ->join('unit', 'unit.id = waste_management.unit_id')
-            ->where('waste_management.status', 'dikirim')
-            ->findAll();
-
-        // Check all units
-        $allUnits = $unitModel->findAll();
-
-        // Check all users
-        $allUsers = $userModel->findAll();
-
-        // Check all penilaian statuses
-        $statusCount = $penilaianModel
-            ->select('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->findAll();
-
-        $data = [
-            'title' => 'Debug Data Check',
-            'penilaian_dikirim' => $penilaianDikirim,
-            'waste_dikirim' => $wasteDikirim,
-            'all_units' => $allUnits,
-            'all_users' => $allUsers,
-            'status_count' => $statusCount
-        ];
-
-        return view('debug/data_check', $data);
-    }
-
-    public function createSampleData()
-    {
-        // Only allow in development
-        if (ENVIRONMENT !== 'development') {
-            return $this->response->setStatusCode(404);
+        
+        // Status summary
+        echo "<h2>Status Summary</h2>";
+        $statusQuery = $db->query("SELECT status, COUNT(*) as count 
+                                   FROM waste_management 
+                                   GROUP BY status");
+        $statusResults = $statusQuery->getResultArray();
+        
+        echo "<table>";
+        echo "<tr><th>Status</th><th>Count</th></tr>";
+        foreach ($statusResults as $row) {
+            echo "<tr><td>{$row['status']}</td><td>{$row['count']}</td></tr>";
         }
-
-        $penilaianModel = new PenilaianModel();
-        $unitModel = new UnitModel();
-
-        // Get first unit
-        $unit = $unitModel->first();
-        if (!$unit) {
-            return 'No unit found. Please create a unit first.';
+        echo "</table>";
+        
+        // Data with status 'dikirim_ke_tps'
+        echo "<h2>Data with Status 'dikirim_ke_tps'</h2>";
+        $tpsQuery = $db->query("SELECT id, unit_id, user_id, jenis_sampah, berat_kg, status, created_at 
+                                FROM waste_management 
+                                WHERE status = 'dikirim_ke_tps'
+                                ORDER BY created_at DESC");
+        $tpsResults = $tpsQuery->getResultArray();
+        
+        if (empty($tpsResults)) {
+            echo "<p style='color: orange; font-weight: bold;'>NO DATA WITH STATUS 'dikirim_ke_tps' FOUND!</p>";
+        } else {
+            echo "<p style='color: green; font-weight: bold;'>Found " . count($tpsResults) . " records with status 'dikirim_ke_tps'</p>";
+            echo "<table>";
+            echo "<tr><th>ID</th><th>Unit ID</th><th>User ID</th><th>Jenis Sampah</th><th>Berat (kg)</th><th>Status</th><th>Created At</th></tr>";
+            foreach ($tpsResults as $row) {
+                echo "<tr>";
+                echo "<td>{$row['id']}</td>";
+                echo "<td>{$row['unit_id']}</td>";
+                echo "<td>{$row['user_id']}</td>";
+                echo "<td>{$row['jenis_sampah']}</td>";
+                echo "<td>{$row['berat_kg']}</td>";
+                echo "<td style='color: #ffc107; font-weight: bold;'>{$row['status']}</td>";
+                echo "<td>{$row['created_at']}</td>";
+                echo "</tr>";
+            }
+            echo "</table>";
         }
-
-        // Create sample penilaian data
-        $sampleData = [
-            [
-                'unit_id' => $unit['id'],
-                'kategori_uigm' => 'SI',
-                'indikator' => 'Test Indikator 1',
-                'nilai_input' => 85.5,
-                'status' => 'dikirim'
-            ],
-            [
-                'unit_id' => $unit['id'],
-                'kategori_uigm' => 'EC',
-                'indikator' => 'Test Indikator 2',
-                'nilai_input' => 75.0,
-                'status' => 'dikirim'
-            ]
-        ];
-
-        foreach ($sampleData as $data) {
-            $penilaianModel->insert($data);
+        
+        // Check users
+        echo "<h2>Sample Users</h2>";
+        $userQuery = $db->query("SELECT id, username, role, unit_id FROM users WHERE role IN ('user', 'pengelola_tps') LIMIT 10");
+        $userResults = $userQuery->getResultArray();
+        
+        echo "<table>";
+        echo "<tr><th>ID</th><th>Username</th><th>Role</th><th>Unit ID</th></tr>";
+        foreach ($userResults as $user) {
+            echo "<tr>";
+            echo "<td>{$user['id']}</td>";
+            echo "<td>{$user['username']}</td>";
+            echo "<td>{$user['role']}</td>";
+            echo "<td>{$user['unit_id']}</td>";
+            echo "</tr>";
         }
-
-        return 'Sample data created successfully!';
+        echo "</table>";
+        
+        // Check units
+        echo "<h2>Units</h2>";
+        $unitQuery = $db->query("SELECT id, nama_unit FROM unit LIMIT 10");
+        $unitResults = $unitQuery->getResultArray();
+        
+        echo "<table>";
+        echo "<tr><th>ID</th><th>Nama Unit</th></tr>";
+        foreach ($unitResults as $unit) {
+            echo "<tr>";
+            echo "<td>{$unit['id']}</td>";
+            echo "<td>{$unit['nama_unit']}</td>";
+            echo "</tr>";
+        }
+        echo "</table>";
+        
+        echo "<hr>";
+        echo "<p><a href='" . base_url() . "'>Back to Home</a></p>";
     }
 }
