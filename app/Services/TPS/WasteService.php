@@ -417,12 +417,21 @@ class WasteService
     private function getWasteList(int $tpsId): array
     {
         try {
+            // TPS should see:
+            // 1. Data sent to TPS from users (status 'dikirim_ke_tps')
+            // 2. Data that TPS has processed (unit_id = tpsId)
             return $this->wasteModel
-                ->where('unit_id', $tpsId)
+                ->groupStart()
+                    // Data sent to TPS from any unit
+                    ->where('status', 'dikirim_ke_tps')
+                    // OR data that belongs to this TPS
+                    ->orWhere('unit_id', $tpsId)
+                ->groupEnd()
                 ->orderBy('created_at', 'DESC')
                 ->findAll();
         } catch (\Exception $e) {
             log_message('error', 'Error getting waste list: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
             return [];
         }
     }
@@ -479,20 +488,52 @@ class WasteService
         $thisMonth = date('Y-m');
 
         try {
+            // Count data sent to TPS + data owned by TPS
+            $totalEntries = $this->wasteModel
+                ->groupStart()
+                    ->where('status', 'dikirim_ke_tps')
+                    ->orWhere('unit_id', $tpsId)
+                ->groupEnd()
+                ->countAllResults();
+            
+            // Count pending (waiting for TPS review)
+            $pendingCount = $this->wasteModel
+                ->where('status', 'dikirim_ke_tps')
+                ->countAllResults();
+            
+            // Count approved by TPS
+            $approvedCount = $this->wasteModel
+                ->where('unit_id', $tpsId)
+                ->where('status', 'disetujui_tps')
+                ->countAllResults();
+            
+            // Count draft (TPS own data)
+            $draftCount = $this->wasteModel
+                ->where('unit_id', $tpsId)
+                ->where('status', 'draft')
+                ->countAllResults();
+            
+            // Total weight
+            $totalWeight = $this->wasteModel
+                ->selectSum('berat_kg')
+                ->groupStart()
+                    ->where('status', 'dikirim_ke_tps')
+                    ->orWhere('unit_id', $tpsId)
+                ->groupEnd()
+                ->get()
+                ->getRow()
+                ->berat_kg ?? 0;
+            
             return [
-                'total_entries' => $this->wasteModel->where('unit_id', $tpsId)->countAllResults(),
-                'pending_count' => $this->wasteModel->where('unit_id', $tpsId)->whereIn('status', ['dikirim', 'review'])->countAllResults(),
-                'approved_count' => $this->wasteModel->where('unit_id', $tpsId)->where('status', 'disetujui')->countAllResults(),
-                'draft_count' => $this->wasteModel->where('unit_id', $tpsId)->where('status', 'draft')->countAllResults(),
-                'total_weight' => $this->wasteModel
-                    ->selectSum('berat_kg')
-                    ->where('unit_id', $tpsId)
-                    ->get()
-                    ->getRow()
-                    ->berat_kg ?? 0
+                'total_entries' => $totalEntries,
+                'pending_count' => $pendingCount,
+                'approved_count' => $approvedCount,
+                'draft_count' => $draftCount,
+                'total_weight' => $totalWeight
             ];
         } catch (\Exception $e) {
             log_message('error', 'Error getting TPS waste stats: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
             return $this->getDefaultStats();
         }
     }
