@@ -118,16 +118,6 @@ $stats = $stats ?? [];
                 </div>
             </div>
             
-            <div class="stat-card success">
-                <div class="stat-icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="stat-content">
-                    <h3><?= $stats['approved_count'] ?? 0 ?></h3>
-                    <p>Disetujui Admin</p>
-                </div>
-            </div>
-            
             <div class="stat-card secondary">
                 <div class="stat-icon">
                     <i class="fas fa-file"></i>
@@ -321,18 +311,6 @@ $stats = $stats ?? [];
                         <a class="nav-link" data-bs-toggle="tab" href="#rejected-tps-tab">
                             <i class="fas fa-exclamation-triangle text-danger"></i> Ditolak TPS 
                             <span class="badge bg-danger"><?= count(array_filter($waste_list, fn($w) => ($w['status'] ?? '') === 'ditolak_tps')) ?></span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#approved-tab">
-                            <i class="fas fa-check-circle text-success"></i> Disetujui Admin 
-                            <span class="badge bg-success"><?= count(array_filter($waste_list, fn($w) => ($w['status'] ?? '') === 'disetujui')) ?></span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#rejected-tab">
-                            <i class="fas fa-times-circle text-danger"></i> Ditolak Admin 
-                            <span class="badge bg-danger"><?= count(array_filter($waste_list, fn($w) => ($w['status'] ?? '') === 'ditolak')) ?></span>
                         </a>
                     </li>
                 </ul>
@@ -561,126 +539,6 @@ $stats = $stats ?? [];
                                 <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
                                 <p class="text-muted">Tidak ada data yang ditolak oleh TPS.</p>
                                 <small class="text-muted">Data yang ditolak TPS akan muncul di sini dan dapat Anda edit untuk dikirim ulang.</small>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- Tab 4: Disetujui Admin -->
-                    <div class="tab-pane fade" id="approved-tab">
-                        <?php 
-                        $approvedData = array_filter($waste_list, fn($w) => ($w['status'] ?? '') === 'disetujui');
-                        ?>
-                        <?php if (!empty($approvedData)): ?>
-                            <div class="table-responsive">
-                                <table class="table table-hover" style="table-layout: auto; min-width: 100%;">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 50px;">No</th>
-                                            <th style="width: 140px;">Tanggal</th>
-                                            <th style="width: 150px;">Jenis Sampah</th>
-                                            <th style="width: 80px;">Berat</th>
-                                            <th style="width: 70px;">Satuan</th>
-                                            <th style="width: 100px;">Harga/Satuan</th>
-                                            <th style="width: 120px;">Total Nilai</th>
-                                            <th style="width: 100px;">Status</th>
-                                            <th style="width: 100px;">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php $no = 1; foreach ($approvedData as $waste): ?>
-                                        <tr>
-                                            <td><?= $no++ ?></td>
-                                            <td><?= date('d/m/Y H:i', strtotime($waste['created_at'])) ?></td>
-                                            <td>
-                                                <span class="badge bg-primary"><?= $waste['jenis_sampah'] ?? 'N/A' ?></span>
-                                            </td>
-                                            <td><?php 
-                                                $berat = $waste['berat_kg'] ?? $waste['berat'] ?? 0;
-                                                $jumlah = $waste['jumlah'] ?? $berat;
-                                                echo ($jumlah == floor($jumlah)) ? number_format($jumlah, 0, ',', '.') : number_format($jumlah, 2, ',', '.');
-                                            ?></td>
-                                            <td><?= $waste['satuan'] ?? 'kg' ?></td>
-                                            <td>-</td>
-                                            <td><?= formatCurrency($waste['nilai_rupiah'] ?? 0) ?></td>
-                                            <td>
-                                                <span class="badge bg-success">Disetujui</span>
-                                            </td>
-                                            <td>
-                                                <button type="button" class="btn btn-sm btn-info" onclick="showDetail(<?= htmlspecialchars(json_encode($waste)) ?>)">
-                                                    <i class="fas fa-eye"></i> Detail
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php else: ?>
-                            <div class="empty-state">
-                                <i class="fas fa-check-circle fa-3x text-muted mb-3"></i>
-                                <p class="text-muted">Belum ada data yang disetujui.</p>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- Tab 3: Ditolak -->
-                    <div class="tab-pane fade" id="rejected-tab">
-                        <?php 
-                        $rejectedData = array_filter($waste_list, fn($w) => ($w['status'] ?? '') === 'ditolak');
-                        ?>
-                        <?php if (!empty($rejectedData)): ?>
-                            <div class="table-responsive">
-                                <table class="table table-hover" style="table-layout: auto; min-width: 100%;">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 50px;">No</th>
-                                            <th style="width: 140px;">Tanggal</th>
-                                            <th style="width: 150px;">Jenis Sampah</th>
-                                            <th style="width: 80px;">Berat</th>
-                                            <th style="width: 70px;">Satuan</th>
-                                            <th style="width: 100px;">Harga/Satuan</th>
-                                            <th style="width: 120px;">Total Nilai</th>
-                                            <th style="width: 100px;">Status</th>
-                                            <th style="width: 200px;">Alasan</th>
-                                            <th style="width: 100px;">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php $no = 1; foreach ($rejectedData as $waste): ?>
-                                        <tr>
-                                            <td><?= $no++ ?></td>
-                                            <td><?= date('d/m/Y H:i', strtotime($waste['created_at'])) ?></td>
-                                            <td>
-                                                <span class="badge bg-primary"><?= $waste['jenis_sampah'] ?? 'N/A' ?></span>
-                                            </td>
-                                            <td><?php 
-                                                $berat = $waste['berat_kg'] ?? $waste['berat'] ?? 0;
-                                                $jumlah = $waste['jumlah'] ?? $berat;
-                                                echo ($jumlah == floor($jumlah)) ? number_format($jumlah, 0, ',', '.') : number_format($jumlah, 2, ',', '.');
-                                            ?></td>
-                                            <td><?= $waste['satuan'] ?? 'kg' ?></td>
-                                            <td>-</td>
-                                            <td><?= formatCurrency($waste['nilai_rupiah'] ?? 0) ?></td>
-                                            <td>
-                                                <span class="badge bg-danger">Ditolak</span>
-                                            </td>
-                                            <td>
-                                                <small class="text-muted"><?= $waste['catatan'] ?? $waste['review_notes'] ?? '-' ?></small>
-                                            </td>
-                                            <td>
-                                                <button type="button" class="btn btn-sm btn-info" onclick="showDetail(<?= htmlspecialchars(json_encode($waste)) ?>)">
-                                                    <i class="fas fa-eye"></i> Detail
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php else: ?>
-                            <div class="empty-state">
-                                <i class="fas fa-times-circle fa-3x text-muted mb-3"></i>
-                                <p class="text-muted">Tidak ada data yang ditolak.</p>
                             </div>
                         <?php endif; ?>
                     </div>
