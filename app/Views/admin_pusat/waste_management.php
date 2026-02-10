@@ -150,6 +150,70 @@ $summary = $summary ?? [];
                             </tbody>
                         </table>
                     </div>
+                    
+                    <!-- Pagination -->
+                    <?php if (isset($pager) && $pager && $pager->getPageCount() > 1): ?>
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="text-muted">
+                                <small>
+                                    Menampilkan 
+                                    <strong><?= count($waste_list) ?></strong> dari 
+                                    <strong><?= $pager->getTotal() ?></strong> total data
+                                </small>
+                            </div>
+                            <div class="text-muted">
+                                <small>
+                                    Halaman <strong><?= $pager->getCurrentPage() ?></strong> dari 
+                                    <strong><?= $pager->getPageCount() ?></strong>
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <nav aria-label="Pagination">
+                            <ul class="pagination justify-content-center">
+                                <!-- Previous Button -->
+                                <?php if ($pager->getCurrentPage() > 1): ?>
+                                    <li class="page-item">
+                                        <a class="page-link" href="<?= base_url('/admin-pusat/waste?page=' . ($pager->getCurrentPage() - 1)) ?>" aria-label="Previous">
+                                            <span aria-hidden="true">&laquo; Previous</span>
+                                        </a>
+                                    </li>
+                                <?php else: ?>
+                                    <li class="page-item disabled">
+                                        <span class="page-link">&laquo; Previous</span>
+                                    </li>
+                                <?php endif; ?>
+
+                                <!-- Page Numbers -->
+                                <?php for ($i = 1; $i <= $pager->getPageCount(); $i++): ?>
+                                    <?php if ($i == $pager->getCurrentPage()): ?>
+                                        <li class="page-item active">
+                                            <span class="page-link"><?= $i ?></span>
+                                        </li>
+                                    <?php else: ?>
+                                        <li class="page-item">
+                                            <a class="page-link" href="<?= base_url('/admin-pusat/waste?page=' . $i) ?>"><?= $i ?></a>
+                                        </li>
+                                    <?php endif; ?>
+                                <?php endfor; ?>
+
+                                <!-- Next Button -->
+                                <?php if ($pager->getCurrentPage() < $pager->getPageCount()): ?>
+                                    <li class="page-item">
+                                        <a class="page-link" href="<?= base_url('/admin-pusat/waste?page=' . ($pager->getCurrentPage() + 1)) ?>" aria-label="Next">
+                                            <span aria-hidden="true">Next &raquo;</span>
+                                        </a>
+                                    </li>
+                                <?php else: ?>
+                                    <li class="page-item disabled">
+                                        <span class="page-link">Next &raquo;</span>
+                                    </li>
+                                <?php endif; ?>
+                            </ul>
+                        </nav>
+                    </div>
+                    <?php endif; ?>
                 <?php else: ?>
                     <div class="empty-state">
                         <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
@@ -695,6 +759,39 @@ body {
 .form-control:focus, .form-select:focus {
     border-color: #007bff;
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* ===== PAGINATION ===== */
+.pagination {
+    margin: 0;
+}
+
+.pagination .page-link {
+    color: #007bff;
+    border: 1px solid #dee2e6;
+    padding: 8px 12px;
+    margin: 0 2px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.pagination .page-link:hover {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.pagination .page-item.active .page-link {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+    font-weight: 600;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background: #f8f9fa;
+    border-color: #dee2e6;
 }
 
 /* ===== RESPONSIVE DESIGN ===== */

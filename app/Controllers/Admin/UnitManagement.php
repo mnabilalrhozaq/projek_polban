@@ -40,7 +40,10 @@ class UnitManagement extends BaseController
                 $builder->where('status_aktif', $statusFilter);
             }
 
-            $units = $builder->orderBy('nama_unit', 'ASC')->findAll();
+            // Pagination
+            $perPage = 15;
+            $units = $builder->orderBy('nama_unit', 'ASC')->paginate($perPage);
+            $pager = $this->unitModel->pager;
 
             // Calculate statistics
             $stats = [
@@ -56,6 +59,7 @@ class UnitManagement extends BaseController
             $data = [
                 'title' => 'Manajemen Unit',
                 'units' => $units,
+                'pager' => $pager,
                 'stats' => $stats,
                 'allTipes' => [
                     'fakultas' => 'Fakultas',

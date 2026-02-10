@@ -220,6 +220,78 @@
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Pagination -->
+                <?php if (!empty($units) && isset($pager) && $pager->getPageCount() > 1): ?>
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="text-muted">
+                            <small>
+                                Menampilkan 
+                                <strong><?= count($units) ?></strong> dari 
+                                <strong><?= $stats['total'] ?? 0 ?></strong> total unit
+                            </small>
+                        </div>
+                        <div class="text-muted">
+                            <small>
+                                Halaman <strong><?= $pager->getCurrentPage() ?></strong> dari 
+                                <strong><?= $pager->getPageCount() ?></strong>
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <?php 
+                    // Get current filter
+                    $tipeFilter = $_GET['tipe'] ?? '';
+                    $statusFilter = $_GET['status'] ?? '';
+                    $filterParam = '';
+                    if ($tipeFilter) $filterParam .= '&tipe=' . $tipeFilter;
+                    if ($statusFilter !== '') $filterParam .= '&status=' . $statusFilter;
+                    ?>
+                    <nav aria-label="Pagination">
+                        <ul class="pagination justify-content-center">
+                            <!-- Previous Button -->
+                            <?php if ($pager->getCurrentPage() > 1): ?>
+                                <li class="page-item">
+                                    <a class="page-link" href="<?= base_url('/admin-pusat/unit-management?page=' . ($pager->getCurrentPage() - 1) . $filterParam) ?>" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo; Previous</span>
+                                    </a>
+                                </li>
+                            <?php else: ?>
+                                <li class="page-item disabled">
+                                    <span class="page-link">&laquo; Previous</span>
+                                </li>
+                            <?php endif; ?>
+
+                            <!-- Page Numbers -->
+                            <?php for ($i = 1; $i <= $pager->getPageCount(); $i++): ?>
+                                <?php if ($i == $pager->getCurrentPage()): ?>
+                                    <li class="page-item active">
+                                        <span class="page-link"><?= $i ?></span>
+                                    </li>
+                                <?php else: ?>
+                                    <li class="page-item">
+                                        <a class="page-link" href="<?= base_url('/admin-pusat/unit-management?page=' . $i . $filterParam) ?>"><?= $i ?></a>
+                                    </li>
+                                <?php endif; ?>
+                            <?php endfor; ?>
+
+                            <!-- Next Button -->
+                            <?php if ($pager->getCurrentPage() < $pager->getPageCount()): ?>
+                                <li class="page-item">
+                                    <a class="page-link" href="<?= base_url('/admin-pusat/unit-management?page=' . ($pager->getCurrentPage() + 1) . $filterParam) ?>" aria-label="Next">
+                                        <span aria-hidden="true">Next &raquo;</span>
+                                    </a>
+                                </li>
+                            <?php else: ?>
+                                <li class="page-item disabled">
+                                    <span class="page-link">Next &raquo;</span>
+                                </li>
+                            <?php endif; ?>
+                        </ul>
+                    </nav>
+                </div>
+                <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>
@@ -683,6 +755,39 @@ body {
 .action-buttons {
     display: flex;
     gap: 5px;
+}
+
+/* Pagination Styling */
+.pagination {
+    margin: 0;
+}
+
+.pagination .page-link {
+    color: #667eea;
+    border: 1px solid #dee2e6;
+    padding: 8px 12px;
+    margin: 0 2px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.pagination .page-link:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.pagination .page-item.active .page-link {
+    background: #667eea;
+    border-color: #667eea;
+    color: white;
+    font-weight: 600;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background: #f8f9fa;
+    border-color: #dee2e6;
 }
 
 .empty-state {

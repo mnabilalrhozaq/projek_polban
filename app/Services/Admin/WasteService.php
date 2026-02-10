@@ -254,35 +254,18 @@ class WasteService
     private function getWasteList(int $page = 1, int $perPage = 10): array
     {
         try {
-            log_message('info', 'Admin - Getting waste list with unit names...');
+            log_message('info', 'Admin - Getting waste list with pagination...');
             
-            $db = \Config\Database::connect();
-            
-            // Debug: cek total data dulu
-            $totalData = $db->table('waste_management')->countAllResults(false);
-            log_message('info', 'Admin - Total data in waste_management: ' . $totalData);
-            
-            // Debug: cek data per status
-            $statusQuery = $db->table('waste_management')
-                ->select('status, COUNT(*) as count')
-                ->groupBy('status')
-                ->get()
-                ->getResultArray();
-            log_message('info', 'Admin - Status breakdown: ' . json_encode($statusQuery));
-            
-            // Calculate offset
-            $offset = ($page - 1) * $perPage;
-            
-            // Query utama dengan pagination
             // Show: pending data OR approved/rejected data less than 2 days old
             $twoDaysAgo = date('Y-m-d H:i:s', strtotime('-2 days'));
             
-            $result = $db->table('waste_management')
+            // Use model's paginate() for automatic pagination
+            $result = $this->wasteModel
                 ->select('waste_management.*, unit.nama_unit, master_harga_sampah.nama_jenis')
                 ->join('unit', 'unit.id = waste_management.unit_id', 'left')
                 ->join('master_harga_sampah', 'master_harga_sampah.jenis_sampah = waste_management.jenis_sampah', 'left')
                 ->groupStart()
-                    ->whereIn('waste_management.status', ['draft', 'dikirim', 'review'])
+                    ->whereIn('waste_management.status', ['draft', 'dikirim', 'review', 'dikirim_ke_tps', 'disetujui_tps', 'ditolak_tps'])
                     ->orGroupStart()
                         ->whereIn('waste_management.status', ['disetujui', 'ditolak'])
                         ->where('waste_management.action_timestamp IS NOT NULL')
@@ -290,9 +273,7 @@ class WasteService
                     ->groupEnd()
                 ->groupEnd()
                 ->orderBy('waste_management.created_at', 'DESC')
-                ->limit($perPage, $offset)
-                ->get()
-                ->getResultArray();
+                ->paginate($perPage);
             
             log_message('info', 'Admin - Query found ' . count($result) . ' records (page ' . $page . ')');
             
