@@ -60,7 +60,7 @@
                 </h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="<?= base_url('/pengelola-tps/waste/save') ?>" id="tpsWasteForm">
+                <form method="POST" action="<?= base_url('/pengelola-tps/waste/save') ?>" id="tpsWasteForm" enctype="multipart/form-data">
                     <?= csrf_field() ?>
                     
                     <div class="row">
