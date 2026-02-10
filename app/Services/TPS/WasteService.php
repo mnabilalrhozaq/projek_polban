@@ -418,12 +418,12 @@ class WasteService
     {
         try {
             // TPS should see:
-            // 1. Data sent to TPS from users (status 'dikirim_ke_tps')
+            // 1. Data sent to TPS from users (status 'dikirim_ke_tps' or old 'dikirim')
             // 2. Data that TPS has processed (unit_id = tpsId)
             return $this->wasteModel
                 ->groupStart()
-                    // Data sent to TPS from any unit
-                    ->where('status', 'dikirim_ke_tps')
+                    // Data sent to TPS from any unit (new and old status)
+                    ->whereIn('status', ['dikirim_ke_tps', 'dikirim'])
                     // OR data that belongs to this TPS
                     ->orWhere('unit_id', $tpsId)
                 ->groupEnd()

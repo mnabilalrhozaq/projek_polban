@@ -78,6 +78,9 @@ class WasteService
                 $status = 'dikirim_ke_tps'; // Changed from 'dikirim' to 'dikirim_ke_tps'
             }
             
+            log_message('info', 'User Save Waste - status_action: ' . ($data['status_action'] ?? 'NOT SET'));
+            log_message('info', 'User Save Waste - Determined status: ' . $status);
+            
             // Get satuan from input, default to 'kg' if not provided
             $satuan = $data['satuan'] ?? 'kg';
             

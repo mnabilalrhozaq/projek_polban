@@ -102,7 +102,7 @@ class LaporanMasukService
 
             log_message('info', 'TPS Approve - Current status: ' . $laporan['status']);
 
-            if ($laporan['status'] !== 'dikirim_ke_tps') {
+            if (!in_array($laporan['status'], ['dikirim_ke_tps', 'dikirim'])) {
                 $db->transRollback();
                 log_message('error', 'TPS Approve - Invalid status: ' . $laporan['status']);
                 return ['success' => false, 'message' => 'Laporan tidak dalam status menunggu review TPS'];
@@ -171,7 +171,7 @@ class LaporanMasukService
 
             log_message('info', 'TPS Reject - Current status: ' . $laporan['status']);
 
-            if ($laporan['status'] !== 'dikirim_ke_tps') {
+            if (!in_array($laporan['status'], ['dikirim_ke_tps', 'dikirim'])) {
                 $db->transRollback();
                 log_message('error', 'TPS Reject - Invalid status: ' . $laporan['status']);
                 return ['success' => false, 'message' => 'Laporan tidak dalam status menunggu review TPS'];
@@ -227,7 +227,8 @@ class LaporanMasukService
         try {
             $db = \Config\Database::connect();
             
-            // Get all laporan with status 'dikirim_ke_tps' (sent to TPS for review)
+            // Get all laporan with status 'dikirim_ke_tps' or 'dikirim' (sent to TPS for review)
+            // Support both old and new status for backward compatibility
             return $db->table('waste_management')
                 ->select('waste_management.*, 
                          unit.nama_unit as unit_nama, 
@@ -235,7 +236,7 @@ class LaporanMasukService
                          users.email as user_email')
                 ->join('unit', 'unit.id = waste_management.unit_id', 'left')
                 ->join('users', 'users.id = waste_management.user_id', 'left')
-                ->where('waste_management.status', 'dikirim_ke_tps')
+                ->whereIn('waste_management.status', ['dikirim_ke_tps', 'dikirim'])
                 ->orderBy('waste_management.created_at', 'ASC')
                 ->get()
                 ->getResultArray();
@@ -278,7 +279,7 @@ class LaporanMasukService
             
             return [
                 'pending_count' => $this->wasteModel
-                    ->where('status', 'dikirim_ke_tps')
+                    ->whereIn('status', ['dikirim_ke_tps', 'dikirim'])
                     ->countAllResults(),
                 
                 'approved_today' => $this->wasteModel
