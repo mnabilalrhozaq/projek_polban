@@ -2,25 +2,16 @@
 
 namespace App\Services;
 
-use App\Models\DashboardSettingModel;
 use App\Models\WasteDataModel;
 use App\Models\HargaSampahModel;
 
 class DashboardService
 {
-    protected $dashboardSettingModel;
     protected $wasteDataModel;
     protected $hargaSampahModel;
 
     public function __construct()
     {
-        try {
-            $this->dashboardSettingModel = new DashboardSettingModel();
-        } catch (\Exception $e) {
-            log_message('error', 'DashboardService: Failed to load DashboardSettingModel - ' . $e->getMessage());
-            $this->dashboardSettingModel = null;
-        }
-        
         try {
             $this->wasteDataModel = new WasteDataModel();
         } catch (\Exception $e) {
@@ -624,38 +615,5 @@ class DashboardService
         if ($time < 31536000) return floor($time/2592000) . ' bulan yang lalu';
         
         return floor($time/31536000) . ' tahun yang lalu';
-    }
-
-    /**
-     * Admin methods
-     */
-    public function getAllDashboardSettings(): array
-    {
-        return $this->dashboardSettingModel->getAllSettingsGroupedByRole();
-    }
-
-    public function updateWidgetSettings(int $id, array $data): bool
-    {
-        return $this->dashboardSettingModel->updateWidgetConfig($id, $data);
-    }
-
-    public function toggleWidget(int $id): bool
-    {
-        return $this->dashboardSettingModel->toggleWidget($id);
-    }
-
-    public function updateWidgetOrder(string $role, array $orders): bool
-    {
-        return $this->dashboardSettingModel->updateWidgetOrder($role, $orders);
-    }
-
-    public function getAvailableWidgets(): array
-    {
-        return $this->dashboardSettingModel->getAvailableWidgetTypes();
-    }
-
-    public function resetDashboardSettings(string $role): bool
-    {
-        return $this->dashboardSettingModel->resetToDefault($role);
     }
 }

@@ -140,7 +140,7 @@
 
 ## 📋 TABEL DATABASE YANG TERPAKAI
 
-Berikut adalah **SEMUA TABEL** yang digunakan di website ini:
+Berikut adalah **SEMUA TABEL** yang ada di database (berdasarkan file SQL):
 
 ### ✅ TABEL AKTIF (Digunakan oleh Web)
 
@@ -153,42 +153,52 @@ Berikut adalah **SEMUA TABEL** yang digunakan di website ini:
 | 5 | `master_harga_sampah` | MasterHargaSampahModel | Master harga sampah per jenis | ✅ AKTIF |
 | 6 | `log_perubahan_harga` | LogPerubahanHargaModel | Log perubahan harga sampah | ✅ AKTIF |
 | 7 | `dashboard_settings` | DashboardSettingModel | Pengaturan dashboard per role | ✅ AKTIF |
-| 8 | `feature_toggles` | FeatureToggleModel | Toggle fitur on/off | ✅ AKTIF |
-| 9 | `change_logs` | ChangeLogModel | Log perubahan sistem | ✅ AKTIF |
-| 10 | `jenis_sampah` | JenisSampahModel | Jenis-jenis sampah | ✅ AKTIF |
-| 11 | `kriteria_uigm` | KriteriaModel | Kriteria UI Green Metric | ✅ AKTIF |
-| 12 | `tahun_penilaian` | TahunPenilaianModel | Tahun penilaian UIGM | ⚠️ PARTIAL |
-| 13 | `indikator` | IndikatorModel | Indikator penilaian UIGM | ⚠️ PARTIAL |
-| 14 | `pengiriman_unit` | PengirimanUnitModel | Pengiriman data unit | ⚠️ PARTIAL |
-| 15 | `review_kategori` | ReviewKategoriModel | Review kategori UIGM | ⚠️ PARTIAL |
-| 16 | `notifikasi` | NotifikasiModel | Notifikasi sistem | ⚠️ PARTIAL |
-| 17 | `riwayat_versi` | RiwayatVersiModel | Riwayat versi data | ⚠️ PARTIAL |
+| 8 | `laporan_waste` | ❌ TIDAK ADA MODEL | Data waste yang sudah approved/rejected | ✅ AKTIF (manual query) |
+| 9 | `migrations` | - | Tracking migrasi database CodeIgniter | ✅ AKTIF (system) |
 
-### ❌ TABEL TIDAK TERPAKAI (Tidak Ada Model/Controller)
+### ❌ TABEL TIDAK TERPAKAI / DUPLIKAT
 
 | No | Nama Tabel | Status | Keterangan |
 |----|-----------|--------|------------|
-| 1 | `waste_approved` | ❌ TIDAK TERPAKAI | Model ada tapi tidak digunakan |
-| 2 | `waste_rejected` | ❌ TIDAK TERPAKAI | Model ada tapi tidak digunakan |
-| 3 | `notifications` | ❌ TIDAK TERPAKAI | Duplikat dengan `notifikasi` |
+| 1 | `waste_approved` | ❌ TIDAK TERPAKAI | Data approved langsung ke `laporan_waste` |
+| 2 | `waste_rejected` | ❌ TIDAK TERPAKAI | Data rejected langsung ke `laporan_waste` |
+| 3 | `notifications` | ❌ TIDAK TERPAKAI | Ada tapi tidak ada model/controller |
 | 4 | `tps_batch_submissions` | ❌ TIDAK TERPAKAI | Model ada tapi tidak digunakan |
-| 5 | `penilaian_unit` | ❌ TIDAK TERPAKAI | Model ada tapi tidak digunakan |
-| 6 | `laporan_waste` | ❌ TIDAK ADA MODEL | Tabel ada di database tapi tidak ada model |
+| 5 | `penilaian_unit` | ❌ TIDAK TERPAKAI | Ada tapi tidak ada model/controller |
+| 6 | `units` | ❌ DUPLIKAT | Duplikat dengan tabel `unit` |
+
+### ⚠️ CATATAN PENTING
+
+**Tabel `laporan_waste`:**
+- Tabel ini **SANGAT PENTING** tapi **TIDAK ADA MODEL**
+- Digunakan untuk menyimpan data waste yang sudah di-approve/reject oleh admin
+- Saat ini diakses menggunakan **manual query** di service
+- **Rekomendasi:** Buat model `LaporanWasteModel` untuk akses yang lebih terstruktur
+
+**Tabel Duplikat:**
+- `unit` vs `units` - Ada 2 tabel dengan fungsi sama
+- `unit` yang digunakan (12 records)
+- `units` tidak terpakai (4 records)
+- **Rekomendasi:** Hapus tabel `units`
 
 ---
 
-## 📊 DETAIL TABEL UTAMA
+## 📊 DETAIL TABEL UTAMA (Berdasarkan SQL File)
 
 ### 1. **users** (Tabel User)
-**Kolom Penting:**
+**Kolom:**
 - `id` - Primary key
-- `username` - Username login
-- `password` - Password (plain text)
-- `email` - Email user
-- `nama_lengkap` - Nama lengkap
-- `role` - Role: `user`, `pengelola_tps`, `admin_pusat`, `super_admin`
+- `username` - Username login (varchar 100)
+- `password` - Password plain text (varchar 255)
+- `email` - Email user (varchar 100)
+- `nama_lengkap` - Nama lengkap (varchar 255)
+- `role` - Role: `admin_pusat`, `admin_unit`, `super_admin`, `user`, `pengelola_tps`
 - `unit_id` - Foreign key ke tabel `unit`
-- `status_aktif` - Status aktif (1/0)
+- `status_aktif` - Status aktif (tinyint 1/0)
+- `last_login` - Timestamp login terakhir
+- `created_at`, `updated_at` - Timestamps
+
+**Data Saat Ini:** 8 users (1 admin, 2 TPS, 5 user)
 
 **Digunakan di:**
 - Login/Authentication
@@ -198,12 +208,14 @@ Berikut adalah **SEMUA TABEL** yang digunakan di website ini:
 ---
 
 ### 2. **unit** (Tabel Unit/Gedung)
-**Kolom Penting:**
+**Kolom:**
 - `id` - Primary key
-- `kode_unit` - Kode unit (contoh: FT, FE)
-- `nama_unit` - Nama unit (contoh: Fakultas Teknik)
-- `tipe_unit` - Tipe: `fakultas`, `jurusan`, `unit_kerja`, `lembaga`
-- `status_aktif` - Status aktif (1/0)
+- `nama_unit` - Nama unit (varchar 255)
+- `kode_unit` - Kode unit (varchar 50)
+- `status_aktif` - Status aktif (tinyint 1/0)
+- `created_at`, `updated_at` - Timestamps
+
+**Data Saat Ini:** 12 units (TPS, JTI, JTS, JTM, AN, PP, Gedung A-F)
 
 **Digunakan di:**
 - Unit Management
@@ -213,20 +225,25 @@ Berikut adalah **SEMUA TABEL** yang digunakan di website ini:
 ---
 
 ### 3. **waste_management** (Tabel Data Sampah Utama)
-**Kolom Penting:**
+**Kolom:**
 - `id` - Primary key
 - `unit_id` - Foreign key ke `unit`
 - `user_id` - Foreign key ke `users`
-- `jenis_sampah` - Jenis sampah (Plastik, Kertas, dll)
-- `nama_jenis` - Nama detail jenis sampah
-- `berat_kg` - Berat dalam kg
-- `nilai_rupiah` - Nilai dalam rupiah
-- `tanggal` - Tanggal input
+- `jenis_sampah` - Jenis sampah (varchar 100)
+- `nama_jenis` - Nama detail jenis sampah (varchar 100)
+- `berat_kg` - Berat dalam kg (decimal 10,2)
+- `satuan` - Satuan (varchar 20)
+- `jumlah` - Jumlah (decimal 10,2)
+- `nilai_rupiah` - Nilai dalam rupiah (decimal 15,2)
+- `tanggal` - Tanggal input (date)
 - `status` - Status: `draft`, `dikirim_ke_tps`, `disetujui_tps`, `ditolak_tps`, `dikirim`, `disetujui`, `ditolak`
-- `foto_bukti` - Path foto bukti
-- `catatan` - Catatan user
-- `catatan_admin` - Catatan admin/TPS
-- `action_timestamp` - Timestamp untuk auto-delete (2 hari setelah approve/reject)
+- `foto_bukti` - Path foto bukti (varchar 255)
+- `catatan` - Catatan user (text)
+- `catatan_admin` - Catatan admin/TPS (text)
+- `catatan_tps` - Catatan TPS (text)
+- `rejection_reason` - Alasan penolakan (text)
+- `action_timestamp` - Timestamp untuk auto-delete (datetime)
+- `created_at`, `updated_at` - Timestamps
 
 **Digunakan di:**
 - User Waste Management
@@ -237,15 +254,21 @@ Berikut adalah **SEMUA TABEL** yang digunakan di website ini:
 ---
 
 ### 4. **waste_tps** (Tabel Data Sampah TPS)
-**Kolom Penting:**
+**Kolom:**
 - `id` - Primary key
-- `tps_id` - Foreign key ke `users` (role: pengelola_tps)
-- `jenis_sampah` - Jenis sampah
-- `nama_jenis` - Nama detail jenis
-- `berat_kg` - Berat dalam kg
-- `nilai_rupiah` - Nilai dalam rupiah
-- `tanggal` - Tanggal input
+- `user_id` - Foreign key ke `users` (role: pengelola_tps)
+- `jenis_sampah` - Jenis sampah (varchar 100)
+- `nama_jenis` - Nama detail jenis (varchar 100)
+- `berat_kg` - Berat dalam kg (decimal 10,2)
+- `satuan` - Satuan (varchar 20)
+- `jumlah` - Jumlah (decimal 10,2)
+- `nilai_rupiah` - Nilai dalam rupiah (decimal 15,2)
+- `tanggal` - Tanggal input (date)
 - `status` - Status: `draft`, `dikirim`, `disetujui`, `ditolak`
+- `foto_bukti` - Path foto bukti (varchar 255)
+- `catatan` - Catatan TPS (text)
+- `catatan_admin` - Catatan admin (text)
+- `created_at`, `updated_at` - Timestamps
 
 **Digunakan di:**
 - TPS Waste Management
@@ -254,14 +277,19 @@ Berikut adalah **SEMUA TABEL** yang digunakan di website ini:
 ---
 
 ### 5. **master_harga_sampah** (Tabel Master Harga)
-**Kolom Penting:**
+**Kolom:**
 - `id` - Primary key
-- `jenis_sampah` - Kategori sampah (Plastik, Kertas, dll)
-- `nama_jenis` - Nama lengkap jenis
-- `harga_per_satuan` - Harga per satuan
-- `satuan` - Satuan (kg, pcs, dll)
-- `dapat_dijual` - Bisa dijual atau tidak (1/0)
-- `status_aktif` - Status aktif (1/0)
+- `jenis_sampah` - Kategori sampah (varchar 100)
+- `nama_jenis` - Nama lengkap jenis (varchar 100)
+- `harga_per_satuan` - Harga per satuan (decimal 15,2)
+- `satuan` - Satuan: kg, pcs, gram, liter, karung (varchar 20)
+- `status_aktif` - Status aktif (tinyint 1/0)
+- `dapat_dijual` - Bisa dijual atau tidak (tinyint 1/0)
+- `deskripsi` - Deskripsi (text)
+- `created_by`, `updated_by` - User ID
+- `created_at`, `updated_at` - Timestamps
+
+**Data Saat Ini:** 15 jenis sampah (Plastik, Kertas, Logam, Organik, Residu, Besi, Elektronik, dll)
 
 **Digunakan di:**
 - Manajemen Harga Sampah
@@ -270,49 +298,77 @@ Berikut adalah **SEMUA TABEL** yang digunakan di website ini:
 
 ---
 
-### 6. **dashboard_settings** (Tabel Pengaturan Dashboard)
-**Kolom Penting:**
+### 6. **laporan_waste** (Tabel Laporan Waste - PENTING!)
+**Kolom:**
+- `id` - Primary key
+- `waste_id` - Foreign key ke `waste_management`
+- `unit_id` - Foreign key ke `unit`
+- `kategori_id` - Foreign key ke kategori (nullable)
+- `jenis_sampah` - Jenis sampah (varchar 100)
+- `berat_kg` - Berat dalam kg (decimal 10,2)
+- `satuan` - Satuan (varchar 20)
+- `jumlah` - Jumlah (decimal 10,2)
+- `nilai_rupiah` - Nilai dalam rupiah (decimal 15,2)
+- `tanggal_input` - Tanggal input (date)
+- `status` - Status: `approved`, `rejected`
+- `reviewed_by` - User ID yang review
+- `reviewed_at` - Timestamp review
+- `review_notes` - Catatan review (text)
+- `created_by` - User ID pembuat
+- `created_at`, `updated_at` - Timestamps
+
+**Data Saat Ini:** 45 records (approved & rejected)
+
+**⚠️ CATATAN PENTING:**
+- Tabel ini **TIDAK ADA MODEL** - diakses manual query
+- Menyimpan data waste yang sudah di-approve/reject
+- Data dari `waste_management` dipindah ke sini setelah review
+- **Rekomendasi:** Buat `LaporanWasteModel` untuk akses terstruktur
+
+**Digunakan di:**
+- Admin Waste Service (approve/reject)
+- Laporan Waste (reporting)
+
+---
+
+### 7. **dashboard_settings** (Tabel Pengaturan Dashboard)
+**Kolom:**
 - `id` - Primary key
 - `role` - Role: `user`, `tps`
-- `widget_key` - Key widget: `stat_cards`, `waste_summary`, dll
-- `is_active` - Widget aktif atau tidak (1/0)
-- `urutan` - Urutan tampilan widget
-- `custom_label` - Label custom widget
-- `custom_color` - Warna custom widget
+- `widget_key` - Key widget: `stat_cards`, `waste_summary`, dll (varchar 100)
+- `is_active` - Widget aktif atau tidak (tinyint 1/0)
+- `urutan` - Urutan tampilan widget (int)
+- `custom_label` - Label custom widget (varchar 255)
+- `custom_color` - Warna custom widget (varchar 50)
 - `widget_config` - Konfigurasi widget (JSON)
+- `created_at`, `updated_at` - Timestamps
+
+**Data Saat Ini:** 10 records (5 untuk user, 5 untuk TPS)
 
 **Digunakan di:**
 - User Dashboard
 - TPS Dashboard
-- Admin Pengaturan Dashboard
-
----
-
-### 7. **feature_toggles** (Tabel Toggle Fitur)
-**Kolom Penting:**
-- `id` - Primary key
-- `feature_key` - Key fitur (contoh: `export_data`, `import_excel`)
-- `feature_name` - Nama fitur
-- `is_enabled` - Fitur aktif atau tidak (1/0)
-- `allowed_roles` - Role yang boleh akses (JSON array)
-- `description` - Deskripsi fitur
-
-**Digunakan di:**
-- Feature Toggle Management
-- Middleware (cek akses fitur)
+- Admin Pengaturan Dashboard (belum ada UI)
 
 ---
 
 ### 8. **log_perubahan_harga** (Tabel Log Harga)
-**Kolom Penting:**
+**Kolom:**
 - `id` - Primary key
-- `harga_id` - Foreign key ke `master_harga_sampah`
-- `jenis_sampah` - Jenis sampah
-- `harga_lama` - Harga sebelumnya
-- `harga_baru` - Harga baru
-- `alasan_perubahan` - Alasan perubahan
-- `changed_by` - User yang mengubah
+- `master_harga_id` - Foreign key ke `master_harga_sampah`
+- `jenis_sampah` - Jenis sampah (varchar 100)
+- `harga_lama` - Harga sebelumnya (decimal 10,2)
+- `harga_baru` - Harga baru (decimal 10,2)
+- `perubahan_harga` - Selisih harga (decimal 10,2)
+- `persentase_perubahan` - Persentase perubahan (decimal 5,2)
+- `alasan_perubahan` - Alasan perubahan (text)
 - `status_perubahan` - Status: `pending`, `approved`, `rejected`
+- `tanggal_berlaku` - Tanggal berlaku (date)
+- `created_by` - User ID yang mengubah
+- `approved_by` - User ID yang approve
+- `created_at`, `updated_at` - Timestamps
+
+**Data Saat Ini:** 31 records log perubahan
 
 **Digunakan di:**
 - Manajemen Harga (log perubahan)
@@ -320,40 +376,74 @@ Berikut adalah **SEMUA TABEL** yang digunakan di website ini:
 
 ---
 
+### 9. **notifications** (Tabel Notifikasi)
+**Kolom:**
+- `id` - Primary key
+- `user_id` - Foreign key ke `users`
+- `title` - Judul notifikasi (varchar 255)
+- `message` - Pesan notifikasi (text)
+- `type` - Tipe: `info`, `success`, `warning`, `danger`
+- `data` - Data tambahan (JSON)
+- `is_read` - Sudah dibaca atau belum (tinyint 1/0)
+- `read_at` - Timestamp dibaca
+- `created_at`, `updated_at` - Timestamps
+
+**Data Saat Ini:** 3 records
+
+**Status:** ❌ TIDAK TERPAKAI (tidak ada model/controller)
+
+---
+
 ## 🔍 TABEL YANG PERLU DIPERHATIKAN
 
-### ⚠️ Tabel dengan Status PARTIAL (Belum Sepenuhnya Digunakan)
+### ⚠️ Tabel PENTING Tanpa Model
 
-1. **tahun_penilaian** - Untuk UIGM, tapi belum fully implemented
-2. **indikator** - Untuk UIGM, tapi belum fully implemented
-3. **pengiriman_unit** - Untuk UIGM, tapi belum fully implemented
-4. **review_kategori** - Untuk UIGM, tapi belum fully implemented
-5. **notifikasi** - Ada model tapi belum digunakan di UI
-6. **riwayat_versi** - Ada model tapi belum digunakan di UI
+**`laporan_waste`** - Tabel ini sangat penting tapi tidak ada model!
+- Menyimpan semua data waste yang sudah di-approve/reject
+- Saat ini diakses dengan manual query di service
+- **45 records** data approved & rejected
+- **Rekomendasi:** Buat `LaporanWasteModel` untuk akses terstruktur
+
+### ❌ Tabel Duplikat yang Harus Dihapus
+
+**`units` vs `unit`**
+- Ada 2 tabel dengan fungsi sama
+- `unit` - Digunakan (12 records: TPS, JTI, JTS, JTM, AN, PP, Gedung A-F)
+- `units` - Tidak terpakai (4 records: TPS, JTI, JTE, JTM)
+- **Rekomendasi:** Hapus tabel `units`, gunakan `unit` saja
 
 ### ❌ Tabel yang TIDAK TERPAKAI (Bisa Dihapus)
 
-1. **waste_approved** - Tidak digunakan (data approved langsung ke `laporan_waste`)
-2. **waste_rejected** - Tidak digunakan (data rejected langsung ke `laporan_waste`)
-3. **notifications** - Duplikat dengan `notifikasi`
-4. **tps_batch_submissions** - Tidak digunakan
-5. **penilaian_unit** - Tidak digunakan
+1. **waste_approved** - Data approved langsung ke `laporan_waste`
+2. **waste_rejected** - Data rejected langsung ke `laporan_waste`
+3. **notifications** - Ada 3 records tapi tidak ada model/controller
+4. **tps_batch_submissions** - Model ada tapi tidak digunakan
+5. **penilaian_unit** - Tidak ada data, tidak ada model
 
 ---
 
 ## 📝 REKOMENDASI
 
 ### 1. **Dashboard Settings**
-- ✅ Sudah ada tabel dan model
+- ✅ Tabel sudah ada dengan 10 records (5 user, 5 TPS)
 - ⚠️ Belum ada halaman UI untuk admin mengatur dashboard
 - 💡 **Saran:** Buat halaman `/admin-pusat/pengaturan-dashboard` untuk mengatur widget
 
-### 2. **Cleanup Database**
-- ❌ Hapus tabel yang tidak terpakai: `waste_approved`, `waste_rejected`, `notifications`, `tps_batch_submissions`, `penilaian_unit`
-- ⚠️ Review tabel PARTIAL: Apakah akan digunakan atau dihapus?
+### 2. **Buat Model untuk `laporan_waste`**
+- ❌ Tabel penting tapi tidak ada model
+- 📊 Sudah ada 45 records data
+- 💡 **Saran:** Buat `LaporanWasteModel` untuk akses terstruktur dan reporting
 
-### 3. **Optimasi**
-- 📊 Tambahkan index pada kolom yang sering di-query (status, unit_id, user_id)
+### 3. **Cleanup Database**
+- ❌ Hapus tabel duplikat: `units` (gunakan `unit` saja)
+- ❌ Hapus tabel tidak terpakai: `waste_approved`, `waste_rejected`, `notifications`, `tps_batch_submissions`, `penilaian_unit`
+- 💡 **Saran:** Backup dulu sebelum hapus
+
+### 4. **Optimasi**
+- 📊 Tambahkan index pada kolom yang sering di-query:
+  - `waste_management`: `status`, `unit_id`, `user_id`, `tanggal`
+  - `laporan_waste`: `status`, `unit_id`, `tanggal_input`
+  - `users`: `role`, `unit_id`, `status_aktif`
 - 🗑️ Implementasi auto-delete untuk data lama di `waste_management` (sudah ada `action_timestamp`)
 
 ---
@@ -363,22 +453,32 @@ Berikut adalah **SEMUA TABEL** yang digunakan di website ini:
 ### Dashboard Settings:
 - **Fungsi:** Mengatur tampilan dashboard per role (User & TPS)
 - **Widget:** 6 jenis widget yang bisa dikustomisasi
+- **Data:** 10 records sudah ada di database
 - **Status:** Tabel sudah ada, tapi UI pengaturan belum dibuat
 
-### Tabel Database:
-- **Total Tabel:** 23 tabel
-- **Aktif Penuh:** 11 tabel
-- **Partial:** 6 tabel (UIGM related)
-- **Tidak Terpakai:** 6 tabel (bisa dihapus)
+### Tabel Database (Berdasarkan SQL File):
+- **Total Tabel:** 13 tabel
+- **Aktif Penuh:** 9 tabel
+- **Tidak Terpakai:** 5 tabel (bisa dihapus)
+- **Duplikat:** 1 tabel (`units` - duplikat dengan `unit`)
 
 ### Tabel Paling Penting:
-1. `users` - Data user
-2. `unit` - Data unit/gedung
-3. `waste_management` - Data sampah utama
-4. `master_harga_sampah` - Master harga
-5. `dashboard_settings` - Pengaturan dashboard
+1. `users` - 8 users (1 admin, 2 TPS, 5 user)
+2. `unit` - 12 units/gedung
+3. `waste_management` - Data sampah utama (aktif)
+4. `laporan_waste` - 45 records (approved/rejected) - **PERLU MODEL**
+5. `master_harga_sampah` - 15 jenis sampah
+6. `dashboard_settings` - 10 widget settings
+
+### Action Items:
+1. ✅ Buat `LaporanWasteModel` untuk tabel `laporan_waste`
+2. ✅ Buat UI pengaturan dashboard di `/admin-pusat/pengaturan-dashboard`
+3. ✅ Hapus tabel duplikat `units`
+4. ✅ Hapus 5 tabel yang tidak terpakai
+5. ✅ Tambahkan index untuk optimasi query
 
 ---
 
-**Dibuat:** <?= date('Y-m-d H:i:s') ?>  
-**Versi:** 1.0
+**Dibuat:** 11 Februari 2026  
+**Versi:** 2.0 (Updated berdasarkan SQL file)  
+**SQL File:** eksperimen (17).sql
